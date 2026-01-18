@@ -119,6 +119,16 @@ function MyPatientsStack() {
         component={AssignmentDetailScreen}
         options={{ title: 'Detalle de Asignación' }}
       />
+      <Stack.Screen 
+        name="Odontogram" 
+        component={OdontogramScreen}
+        options={{ title: 'Odontograma' }}
+      />
+      <Stack.Screen 
+        name="ProcedureView" 
+        component={ProcedureViewScreen}
+        options={{ title: 'Ver Procedimiento' }}
+      />
     </Stack.Navigator>
   )
 }

@@ -1,0 +1,693 @@
+import React, { useState } from 'react'
+import { View, StyleSheet, ScrollView, TouchableOpacity, Linking, Modal, TextInput, Alert, ActivityIndicator } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Ionicons } from '@expo/vector-icons'
+import { AppText } from '../components/ui'
+import { AppHeader } from '../components/AppHeader'
+import { colors } from '../theme/colors'
+import { spacing } from '../theme/spacing'
+import { api } from '../lib/api'
+
+type AssignmentStatus = 'activa' | 'completada' | 'abandonada'
+
+interface AssignmentDetail {
+  id: number
+  status: AssignmentStatus
+  sessions_completed: number
+  notes?: string
+  assigned_at: string
+  updated_at: string
+  completed_at?: string
+  abandoned_at?: string
+  patient_procedure: {
+    id: number
+    treatment: {
+      id: number
+      name: string
+      description: string
+      estimated_sessions: number
+    }
+    chair: {
+      id: number
+      name: string
+    }
+    patient: {
+      id: number
+      full_name: string
+      email: string
+      phone: string
+      city: string
+      birth_date: string
+    }
+  }
+}
+
+const STATUS_CONFIG = {
+  activa: {
+    label: 'En Proceso',
+    color: colors.success,
+    bgColor: '#E8F5E9',
+    icon: 'medical' as const,
+  },
+  completada: {
+    label: 'Completada',
+    color: colors.brandNavy,
+    bgColor: '#E3F2FD',
+    icon: 'checkmark-circle' as const,
+  },
+  abandonada: {
+    label: 'Abandonada',
+    color: colors.error,
+    bgColor: '#FFEBEE',
+    icon: 'close-circle' as const,
+  },
+}
+
+export default function AssignmentDetailScreen({ route, navigation }: any) {
+  const { assignmentId } = route.params
+  const queryClient = useQueryClient()
+  
+  const [completeModalVisible, setCompleteModalVisible] = useState(false)
+  const [abandonModalVisible, setAbandonModalVisible] = useState(false)
+  const [finalNotes, setFinalNotes] = useState('')
+  const [abandonReason, setAbandonReason] = useState('')
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['assignment', assignmentId],
+    queryFn: async () => {
+      const response = await api.students.getAssignmentDetail(assignmentId)
+      return response.data.data
+    },
+  })
+
+  const completeMutation = useMutation({
+    mutationFn: async () => {
+      return await api.students.completeAssignment(assignmentId, { final_notes: finalNotes })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assignment', assignmentId] })
+      queryClient.invalidateQueries({ queryKey: ['myAssignments'] })
+      setCompleteModalVisible(false)
+      setFinalNotes('')
+      Alert.alert(
+        'Éxito',
+        'Tratamiento completado exitosamente',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ]
+      )
+    },
+    onError: (error: any) => {
+      Alert.alert('Error', error.response?.data?.message || 'No se pudo completar el tratamiento')
+    },
+  })
+
+  const abandonMutation = useMutation({
+    mutationFn: async () => {
+      return await api.students.abandonAssignment(assignmentId, { reason: abandonReason })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assignment', assignmentId] })
+      queryClient.invalidateQueries({ queryKey: ['myAssignments'] })
+      setAbandonModalVisible(false)
+      setAbandonReason('')
+      Alert.alert(
+        'Caso Abandonado',
+        'El caso ha sido abandonado exitosamente',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ]
+      )
+    },
+    onError: (error: any) => {
+      Alert.alert('Error', error.response?.data?.message || 'No se pudo abandonar el caso')
+    },
+  })
+
+  const handleComplete = () => {
+    setCompleteModalVisible(true)
+  }
+
+  const handleAbandon = () => {
+    setAbandonModalVisible(true)
+  }
+
+  const confirmComplete = () => {
+    completeMutation.mutate()
+  }
+
+  const confirmAbandon = () => {
+    if (!abandonReason.trim()) {
+      Alert.alert('Error', 'Debes proporcionar un motivo para abandonar el caso')
+      return
+    }
+    abandonMutation.mutate()
+  }
+
+  const handleCall = (phone: string) => {
+    Linking.openURL(`tel:${phone}`)
+  }
+
+  const handleEmail = (email: string) => {
+    Linking.openURL(`mailto:${email}`)
+  }
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <AppHeader />
+        <View style={styles.loadingContainer}>
+          <AppText variant="body" color="textSecondary">
+            Cargando información...
+          </AppText>
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  if (error || !data) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <AppHeader />
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={60} color={colors.error} />
+          <AppText variant="h3" color="error" style={{ marginTop: spacing.md }}>
+            Error al cargar
+          </AppText>
+          <AppText variant="body" color="textSecondary" style={{ marginTop: spacing.xs }}>
+            No se pudo cargar la información de la asignación
+          </AppText>
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  const statusConfig = STATUS_CONFIG[data.status]
+  const progress = (data.sessions_completed / data.patient_procedure.treatment.estimated_sessions) * 100
+  const age = new Date().getFullYear() - new Date(data.patient_procedure.patient.birth_date).getFullYear()
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <AppHeader
+        title="Detalle de Asignación"
+        showBack
+        onBackPress={() => navigation.goBack()}
+      />
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={colors.brandNavy} />
+          </TouchableOpacity>
+          <AppText variant="h2" weight="bold" color="brandNavy">
+            Detalle de Asignación
+          </AppText>
+        </View>
+
+        <View style={[styles.statusBadge, { backgroundColor: statusConfig.bgColor }]}>
+          <Ionicons name={statusConfig.icon} size={20} color={statusConfig.color} />
+          <AppText variant="body" weight="semibold" style={{ color: statusConfig.color, marginLeft: 8 }}>
+            {statusConfig.label}
+          </AppText>
+        </View>
+
+        <View style={styles.section}>
+          <AppText variant="h3" weight="bold" color="brandNavy" style={{ marginBottom: spacing.md }}>
+            Información del Paciente
+          </AppText>
+
+          <View style={styles.card}>
+            <View style={styles.infoRow}>
+              <Ionicons name="person" size={20} color={colors.brandTurquoise} />
+              <View style={{ marginLeft: spacing.sm, flex: 1 }}>
+                <AppText variant="caption" color="textSecondary">
+                  Nombre completo
+                </AppText>
+                <AppText variant="body" weight="semibold" color="brandNavy">
+                  {data.patient_procedure.patient.full_name}
+                </AppText>
+              </View>
+            </View>
+
+            <View style={styles.infoRow}>
+              <Ionicons name="calendar" size={20} color={colors.brandTurquoise} />
+              <View style={{ marginLeft: spacing.sm, flex: 1 }}>
+                <AppText variant="caption" color="textSecondary">
+                  Edad
+                </AppText>
+                <AppText variant="body" weight="semibold" color="brandNavy">
+                  {age} años
+                </AppText>
+              </View>
+            </View>
+
+            <View style={styles.infoRow}>
+              <Ionicons name="location" size={20} color={colors.brandTurquoise} />
+              <View style={{ marginLeft: spacing.sm, flex: 1 }}>
+                <AppText variant="caption" color="textSecondary">
+                  Ciudad
+                </AppText>
+                <AppText variant="body" weight="semibold" color="brandNavy">
+                  {data.patient_procedure.patient.city}
+                </AppText>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <TouchableOpacity style={styles.contactButton} onPress={() => handleCall(data.patient_procedure.patient.phone)}>
+              <Ionicons name="call" size={20} color={colors.brandTurquoise} />
+              <AppText variant="body" color="brandTurquoise" style={{ marginLeft: spacing.sm }}>
+                {data.patient_procedure.patient.phone}
+              </AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.contactButton} onPress={() => handleEmail(data.patient_procedure.patient.email)}>
+              <Ionicons name="mail" size={20} color={colors.brandTurquoise} />
+              <AppText variant="body" color="brandTurquoise" style={{ marginLeft: spacing.sm }}>
+                {data.patient_procedure.patient.email}
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <AppText variant="h3" weight="bold" color="brandNavy" style={{ marginBottom: spacing.md }}>
+            Tratamiento
+          </AppText>
+
+          <View style={styles.card}>
+            <View style={styles.infoRow}>
+              <Ionicons name="medical" size={20} color={colors.brandTurquoise} />
+              <View style={{ marginLeft: spacing.sm, flex: 1 }}>
+                <AppText variant="caption" color="textSecondary">
+                  Procedimiento
+                </AppText>
+                <AppText variant="body" weight="semibold" color="brandNavy">
+                  {data.patient_procedure.treatment.name}
+                </AppText>
+              </View>
+            </View>
+
+            <View style={styles.infoRow}>
+              <Ionicons name="school" size={20} color={colors.brandTurquoise} />
+              <View style={{ marginLeft: spacing.sm, flex: 1 }}>
+                <AppText variant="caption" color="textSecondary">
+                  Cátedra
+                </AppText>
+                <AppText variant="body" weight="semibold" color="brandNavy">
+                  {data.patient_procedure.chair.name}
+                </AppText>
+              </View>
+            </View>
+
+            <View style={styles.descriptionBox}>
+              <AppText variant="caption" color="textSecondary" style={{ marginBottom: spacing.xs }}>
+                Descripción
+              </AppText>
+              <AppText variant="body" color="brandNavy">
+                {data.patient_procedure.treatment.description}
+              </AppText>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <AppText variant="h3" weight="bold" color="brandNavy" style={{ marginBottom: spacing.md }}>
+            Progreso
+          </AppText>
+
+          <View style={styles.card}>
+            <View style={styles.progressHeader}>
+              <AppText variant="body" color="textSecondary">
+                Sesiones completadas
+              </AppText>
+              <AppText variant="h3" weight="bold" color="brandNavy">
+                {data.sessions_completed}/{data.patient_procedure.treatment.estimated_sessions}
+              </AppText>
+            </View>
+
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${Math.min(progress, 100)}%` }]} />
+            </View>
+
+            <AppText variant="caption" color="textSecondary" style={{ marginTop: spacing.xs, textAlign: 'center' }}>
+              {Math.round(progress)}% completado
+            </AppText>
+          </View>
+        </View>
+
+        {data.notes && (
+          <View style={styles.section}>
+            <AppText variant="h3" weight="bold" color="brandNavy" style={{ marginBottom: spacing.md }}>
+              Notas Clínicas
+            </AppText>
+
+            <View style={styles.notesCard}>
+              <AppText variant="body" color="brandNavy">
+                {data.notes}
+              </AppText>
+            </View>
+          </View>
+        )}
+
+        <View style={styles.section}>
+          <AppText variant="h3" weight="bold" color="brandNavy" style={{ marginBottom: spacing.md }}>
+            Fechas
+          </AppText>
+
+          <View style={styles.card}>
+            <View style={styles.dateRow}>
+              <AppText variant="caption" color="textSecondary">
+                Asignado
+              </AppText>
+              <AppText variant="body" weight="semibold" color="brandNavy">
+                {new Date(data.assigned_at).toLocaleDateString('es-ES', { 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </AppText>
+            </View>
+
+            <View style={styles.dateRow}>
+              <AppText variant="caption" color="textSecondary">
+                Última actualización
+              </AppText>
+              <AppText variant="body" weight="semibold" color="brandNavy">
+                {new Date(data.updated_at).toLocaleDateString('es-ES', { 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </AppText>
+            </View>
+
+            {data.completed_at && (
+              <View style={styles.dateRow}>
+                <AppText variant="caption" color="textSecondary">
+                  Completado
+                </AppText>
+                <AppText variant="body" weight="semibold" color="success">
+                  {new Date(data.completed_at).toLocaleDateString('es-ES', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </AppText>
+              </View>
+            )}
+
+            {data.abandoned_at && (
+              <View style={styles.dateRow}>
+                <AppText variant="caption" color="textSecondary">
+                  Abandonado
+                </AppText>
+                <AppText variant="body" weight="semibold" color="error">
+                  {new Date(data.abandoned_at).toLocaleDateString('es-ES', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </AppText>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {data.status === 'activa' && (
+          <View style={styles.actionsSection}>
+            <TouchableOpacity
+              style={styles.completeButton}
+              onPress={handleComplete}
+            >
+              <Ionicons name="checkmark-circle" size={20} color="#fff" />
+              <AppText style={styles.completeButtonText}>Completar Tratamiento</AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.abandonButton}
+              onPress={handleAbandon}
+            >
+              <Ionicons name="close-circle-outline" size={20} color={colors.error} />
+              <AppText style={styles.abandonButtonText}>Abandonar Caso</AppText>
+            </TouchableOpacity>
+          </View>
+        )}
+        <View style={{ height: spacing.xxl }} />
+      </ScrollView>
+
+      {/* Modal para Completar Tratamiento */}
+      <Modal
+        visible={completeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCompleteModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <AppText style={styles.modalTitle}>Completar Tratamiento</AppText>
+            <AppText style={styles.modalDescription}>
+              ¿Estás seguro de que deseas marcar este tratamiento como completado?
+            </AppText>
+
+            <View style={styles.inputContainer}>
+              <AppText style={styles.inputLabel}>Notas Finales (Opcional)</AppText>
+              <TextInput
+                style={styles.textArea}
+                value={finalNotes}
+                onChangeText={setFinalNotes}
+                placeholder="Agrega observaciones finales sobre el tratamiento..."
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => {
+                  setCompleteModalVisible(false)
+                  setFinalNotes('')
+                }}
+                disabled={completeMutation.isPending}
+              >
+                <AppText style={styles.modalCancelText}>Cancelar</AppText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalConfirmButton]}
+                onPress={confirmComplete}
+                disabled={completeMutation.isPending}
+              >
+                {completeMutation.isPending ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <AppText style={styles.modalConfirmText}>Confirmar</AppText>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal para Abandonar Caso */}
+      <Modal
+        visible={abandonModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAbandonModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <AppText style={styles.modalTitle}>Abandonar Caso</AppText>
+            <AppText style={styles.modalDescription}>
+              ¿Estás seguro de que deseas abandonar este caso?
+            </AppText>
+
+            <View style={styles.inputContainer}>
+              <AppText style={styles.inputLabel}>Motivo *</AppText>
+              <TextInput
+                style={styles.textArea}
+                value={abandonReason}
+                onChangeText={setAbandonReason}
+                placeholder="Explica el motivo del abandono..."
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => {
+                  setAbandonModalVisible(false)
+                  setAbandonReason('')
+                }}
+                disabled={abandonMutation.isPending}
+              >
+                <AppText style={styles.modalCancelText}>Cancelar</AppText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalDangerButton]}
+                onPress={confirmAbandon}
+                disabled={abandonMutation.isPending}
+              >
+                {abandonMutation.isPending ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <AppText style={styles.modalConfirmText}>Abandonar</AppText>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  )
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: spacing.md,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    gap: spacing.md,
+  },
+  backButton: {
+    padding: spacing.xs,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 20,
+    marginBottom: spacing.lg,
+  },
+  section: {
+    marginBottom: spacing.lg,
+  },
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.sm,
+  },
+  contactButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  descriptionBox: {
+    marginTop: spacing.sm,
+    padding: spacing.sm,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: colors.border,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.brandTurquoise,
+    borderRadius: 4,
+  },
+  notesCard: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.brandTurquoise,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  actionsSection: {
+    marginTop: spacing.md,
+    gap: spacing.md,
+  },
+  completeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.success,
+    paddingVertical: spacing.md,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  abandonButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    paddingVertical: spacing.md,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.error,
+  },
+})

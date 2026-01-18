@@ -10,7 +10,7 @@ import {
 } from 'react-native-paper';
 import { View, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuthStore } from '../store/auth';
 
 interface Chair {
   id: number;
@@ -46,7 +46,7 @@ export default function AddProcedureModal({
   patientId,
   preselectedToothFdi,
 }: AddProcedureModalProps) {
-  const { token } = useAuth();
+  const token = useAuthStore((state) => state.token);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   

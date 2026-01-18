@@ -93,6 +93,7 @@ export default {
     },
     plugins: [
       'expo-font',
+      '@react-native-community/datetimepicker',
       [
         'expo-image-picker',
         {

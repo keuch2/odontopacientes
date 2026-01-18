@@ -425,6 +425,29 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
         {data.status === 'activa' && (
           <View style={styles.actionsSection}>
             <TouchableOpacity
+              style={styles.odontogramButton}
+              onPress={() => navigation.navigate('Odontogram', { 
+                patientId: data.patient_procedure.patient.id,
+                assignmentId: data.id 
+              })}
+            >
+              <Ionicons name="medical" size={20} color={colors.brandTurquoise} />
+              <AppText style={styles.odontogramButtonText}>Ver Odontograma</AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => navigation.navigate('ProcedureView', { 
+                procedureId: data.patient_procedure.id,
+                assignmentId: data.id,
+                canEdit: true
+              })}
+            >
+              <Ionicons name="create-outline" size={20} color={colors.brandNavy} />
+              <AppText style={styles.editButtonText}>Editar Tratamiento</AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={styles.completeButton}
               onPress={handleComplete}
             >
@@ -689,5 +712,133 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: colors.error,
+  },
+  completeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: spacing.sm,
+  },
+  abandonButtonText: {
+    color: colors.error,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: spacing.sm,
+  },
+  odontogramButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    paddingVertical: spacing.md,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.brandTurquoise,
+  },
+  odontogramButtonText: {
+    color: colors.brandTurquoise,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: spacing.sm,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    paddingVertical: spacing.md,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.brandNavy,
+  },
+  editButtonText: {
+    color: colors.brandNavy,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: spacing.sm,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: spacing.lg,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.brandNavy,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  inputContainer: {
+    marginBottom: spacing.lg,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.brandNavy,
+    marginBottom: spacing.sm,
+  },
+  textArea: {
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    padding: spacing.md,
+    fontSize: 14,
+    color: colors.brandNavy,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minHeight: 100,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalConfirmButton: {
+    backgroundColor: colors.success,
+  },
+  modalDangerButton: {
+    backgroundColor: colors.error,
+  },
+  modalCancelText: {
+    color: colors.textSecondary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalConfirmText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 })

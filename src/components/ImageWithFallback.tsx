@@ -18,7 +18,7 @@ export const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
   source,
   fallbackIcon = 'image-off-outline',
   fallbackIconSize = 48,
-  fallbackIconColor = colors.gray400,
+  fallbackIconColor = colors.textMuted,
   style,
   ...props
 }) => {

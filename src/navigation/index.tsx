@@ -26,6 +26,10 @@ import CreatePatientScreen from '../screens/CreatePatientScreen'
 import EditPatientScreen from '../screens/EditPatientScreen'
 import OdontogramScreen from '../screens/OdontogramScreen'
 import CreateProcedureScreen from '../screens/CreateProcedureScreen'
+import ProfileEditScreen from '../screens/ProfileEditScreen'
+import ProcedureHistoryScreen from '../screens/ProcedureHistoryScreen'
+import { AppLayout } from '../components/AppLayout'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 // Navegadores
 const Tab = createBottomTabNavigator()
@@ -79,6 +83,26 @@ function CatedrasStack() {
         component={CreateProcedureScreen}
         options={{ title: 'Agregar Procedimiento' }}
       />
+      <Stack.Screen 
+        name="ProfileEdit" 
+        component={ProfileEditScreen}
+        options={{ title: 'Mi Perfil' }}
+      />
+      <Stack.Screen 
+        name="MenuMyPatients" 
+        component={MyPatientsScreen}
+        options={{ title: 'Mis Pacientes' }}
+      />
+      <Stack.Screen 
+        name="ProcedureHistory" 
+        component={ProcedureHistoryScreen}
+        options={{ title: 'Historial de Procedimientos' }}
+      />
+      <Stack.Screen 
+        name="AssignmentDetail" 
+        component={AssignmentDetailScreen}
+        options={{ title: 'Detalle de Asignación' }}
+      />
     </Stack.Navigator>
   )
 }
@@ -128,6 +152,11 @@ function MyPatientsStack() {
         name="ProcedureView" 
         component={ProcedureViewScreen}
         options={{ title: 'Ver Procedimiento' }}
+      />
+      <Stack.Screen 
+        name="PatientDetail" 
+        component={PatientDetailScreen}
+        options={{ title: 'Ficha del Paciente' }}
       />
     </Stack.Navigator>
   )
@@ -205,5 +234,11 @@ function MainTabs() {
 
 // Navigation Container Principal
 export default function Navigation() {
-  return <MainTabs />
+  return (
+    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <AppLayout>
+        <MainTabs />
+      </AppLayout>
+    </SafeAreaView>
+  )
 }

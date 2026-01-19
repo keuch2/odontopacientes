@@ -3,7 +3,7 @@ import { View, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-nat
 import { Text, Button, Surface, Chip, ActivityIndicator, FAB, Menu, Divider } from 'react-native-paper'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useRoute } from '@react-navigation/native'
-import { api } from '../services/api'
+import { api } from '../lib/api'
 import AddProcedureModal from '../components/AddProcedureModal'
 
 interface PatientProcedure {

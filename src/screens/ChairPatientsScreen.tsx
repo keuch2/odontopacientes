@@ -1,84 +1,72 @@
 import React, { useState, useMemo } from 'react'
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native'
+import { useQuery } from '@tanstack/react-query'
 import { AppText, AppCard } from '../components/ui'
-import { AppHeader } from '../components/AppHeader'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
+import { api } from '../lib/api'
 
-const treatments = [
-  'CIRUGÍA SIMPLE',
-  'ENDODONCIA',
-  'PERIODONCIA',
-  'ORTODONCIA',
-  'PRÓTESIS',
-]
+interface Treatment {
+  id: number
+  name: string
+  code: string
+}
 
-const patients = [
-  {
-    id: 1,
-    name: 'Cármen Herrera',
-    age: 20,
-    city: 'Villarrica',
-    university: 'Universidad del Norte',
-    disponibles: 3,
-    enProceso: 3,
-    finalizados: 3,
-    treatments: ['CIRUGÍA SIMPLE', 'ENDODONCIA'],
-  },
-  {
-    id: 2,
-    name: 'María González',
-    age: 25,
-    city: 'Asunción',
-    university: 'Universidad del Norte',
-    disponibles: 2,
-    enProceso: 1,
-    finalizados: 4,
-    treatments: ['PERIODONCIA', 'PRÓTESIS'],
-  },
-  {
-    id: 3,
-    name: 'Juan Pérez',
-    age: 30,
-    city: 'Encarnación',
-    university: 'Universidad del Norte',
-    disponibles: 1,
-    enProceso: 2,
-    finalizados: 2,
-    treatments: ['CIRUGÍA SIMPLE', 'ORTODONCIA'],
-  },
-  {
-    id: 4,
-    name: 'Ana Martínez',
-    age: 22,
-    city: 'Ciudad del Este',
-    university: 'Universidad del Norte',
-    disponibles: 4,
-    enProceso: 0,
-    finalizados: 1,
-    treatments: ['ENDODONCIA', 'PRÓTESIS'],
-  },
-  {
-    id: 5,
-    name: 'Pedro Rodríguez',
-    age: 28,
-    city: 'Villarrica',
-    university: 'Universidad del Norte',
-    disponibles: 2,
-    enProceso: 3,
-    finalizados: 3,
-    treatments: ['CIRUGÍA SIMPLE', 'PERIODONCIA'],
-  },
-]
+interface PatientData {
+  id: number
+  name: string
+  age: number
+  city: string
+  university: string
+  disponibles: number
+  enProceso: number
+  finalizados: number
+  treatments: string[]
+}
 
 export default function ChairPatientsScreen({ route, navigation }: any) {
-  const chairName = route?.params?.chairName || 'Cirugías'
+  const chairId = route?.params?.chairId
+  const chairName = route?.params?.chairName || 'Cátedra'
   const [selectedTreatments, setSelectedTreatments] = useState<string[]>([])
 
-  const handleMenuPress = () => {
-    console.log('Abrir menú')
-  }
+  // Cargar detalles de la cátedra (incluye tratamientos)
+  const { data: chairData, isLoading: chairLoading } = useQuery({
+    queryKey: ['chair', chairId],
+    queryFn: async () => {
+      if (!chairId) return null
+      const response = await api.chairs.get(chairId)
+      return response.data.data
+    },
+    enabled: !!chairId,
+  })
+
+  // Cargar pacientes de esta cátedra
+  const { data: patientsData, isLoading: patientsLoading } = useQuery({
+    queryKey: ['patients-by-chair', chairId],
+    queryFn: async () => {
+      const response = await api.patients.search({ chair_id: chairId })
+      return response.data.data || []
+    },
+    enabled: !!chairId,
+  })
+
+  // Obtener lista de tratamientos de la cátedra
+  const treatments: Treatment[] = chairData?.treatments || []
+
+  // Transformar pacientes al formato esperado
+  const patients: PatientData[] = useMemo(() => {
+    return (patientsData || []).map((patient: any) => ({
+      id: patient.id,
+      name: patient.full_name || patient.name,
+      age: patient.age || 0,
+      city: patient.city || '',
+      university: patient.faculty?.name || '',
+      disponibles: patient.procedures_count?.disponible || 0,
+      enProceso: patient.procedures_count?.proceso || 0,
+      finalizados: patient.procedures_count?.finalizado || 0,
+      treatments: patient.treatments?.map((t: any) => t.name) || [],
+    }))
+  }, [patientsData])
 
   const toggleTreatment = (treatment: string) => {
     setSelectedTreatments(prev => {
@@ -96,13 +84,12 @@ export default function ChairPatientsScreen({ route, navigation }: any) {
     return patients.filter(patient => 
       selectedTreatments.some(treatment => patient.treatments.includes(treatment))
     )
-  }, [selectedTreatments])
+  }, [selectedTreatments, patients])
+
+  const isLoading = chairLoading || patientsLoading
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <AppHeader onMenuPress={handleMenuPress} />
-
+    <View style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Título y botón volver */}
         <View style={styles.titleContainer}>
@@ -117,33 +104,42 @@ export default function ChairPatientsScreen({ route, navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        {/* Filtros de tratamiento */}
-        <AppText color="brandNavy" weight="semibold" style={styles.filterTitle}>
-          Filtrar por tratamientos
-        </AppText>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.brandTurquoise} />
+            <AppText color="textSecondary" style={styles.loadingText}>
+              Cargando pacientes...
+            </AppText>
+          </View>
+        ) : (
+          <>
+            {/* Filtros de tratamiento */}
+            <AppText color="brandNavy" weight="semibold" style={styles.filterTitle}>
+              Filtrar por tratamientos
+            </AppText>
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
           style={styles.treatmentScroll}
           contentContainerStyle={styles.treatmentScrollContent}
         >
-          {treatments.map((treatment, index) => {
-            const isSelected = selectedTreatments.includes(treatment)
+          {treatments.map((treatment) => {
+            const isSelected = selectedTreatments.includes(treatment.name)
             return (
               <TouchableOpacity 
-                key={index} 
+                key={treatment.id} 
                 style={[
                   styles.treatmentChip,
                   isSelected && styles.treatmentChipSelected
                 ]}
-                onPress={() => toggleTreatment(treatment)}
+                onPress={() => toggleTreatment(treatment.name)}
               >
                 <AppText 
                   color={isSelected ? 'white' : 'brandNavy'} 
                   weight="medium" 
                   style={styles.treatmentText}
                 >
-                  {treatment}
+                  {treatment.name}
                 </AppText>
               </TouchableOpacity>
             )
@@ -197,11 +193,13 @@ export default function ChairPatientsScreen({ route, navigation }: any) {
               No se encontraron pacientes con los tratamientos seleccionados
             </AppText>
           </View>
-        )}
+          )}
 
-        <View style={styles.spacer} />
+            <View style={styles.spacer} />
+          </>
+        )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }
 
@@ -299,5 +297,14 @@ const styles = StyleSheet.create({
   },
   spacer: {
     height: spacing.xxl,
+  },
+  loadingContainer: {
+    paddingVertical: spacing.xxl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    fontSize: 14,
   },
 })

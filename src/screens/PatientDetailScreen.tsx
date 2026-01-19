@@ -1,110 +1,122 @@
-import React, { useState } from 'react'
-import { View, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import React, { useState, useMemo } from 'react'
+import { View, StyleSheet, ScrollView, TouchableOpacity, Linking, ActivityIndicator } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { useQuery } from '@tanstack/react-query'
+import { useRoute } from '@react-navigation/native'
 import { AppText, AppButton } from '../components/ui'
-import { AppHeader } from '../components/AppHeader'
 import Odontogram, { ToothData } from '../components/Odontogram'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
+import { api } from '../lib/api'
 
 type TabType = 'disponible' | 'proceso' | 'finalizado'
 
+interface PatientProcedure {
+  id: number
+  treatment: { id: number; name: string; code: string }
+  chair: { id: number; name: string }
+  tooth_fdi: string | null
+  status: 'disponible' | 'proceso' | 'finalizado' | 'contraindicado'
+  created_at: string
+  updated_at: string
+}
+
 export default function PatientDetailScreen({ navigation }: any) {
+  const route = useRoute()
+  const params = route.params as { patientId?: number } | undefined
+  const patientId = params?.patientId
+
   const [activeTab, setActiveTab] = useState<TabType>('disponible')
 
-  const handleMenuPress = () => {
-    console.log('Abrir menú')
-  }
+  // Cargar datos del paciente desde la API
+  const { data: patientData, isLoading: patientLoading, error: patientError } = useQuery<any>({
+    queryKey: ['patient', patientId],
+    queryFn: async () => {
+      if (!patientId) return null
+      const response = await api.patients.get(patientId)
+      return response.data.data
+    },
+    enabled: !!patientId,
+  })
 
-  // Mock data del paciente
-  const patient = {
-    id: 1,
-    name: 'Cármen Herrera',
-    age: 20,
-    gender: 'Femenino',
-    city: 'Villarrica',
-    university: 'Universidad del Norte',
-    address: 'Calle Sin Nombre, 0000, Villarrica',
-    document: '99297652',
-    phone: '0981675387',
-    email: 'carmenherrera@gmail.com',
-    civilStatus: 'Casada',
-    weight: '80 kg',
-    height: '1.65',
-    admissionDate: '16/10/2024',
-    anamnesis: [
-      'Tiene dolores',
-      'Tiene nervios por el procedimiento',
-      'Tuvo una mala experiencia',
-      'Se ha hospitalizado',
-      'Fue atendido/a en los últimos años por un médico',
-      'Ha tomado medicamentos (Ibuprofeno, Aspirina)',
-      'Es alérgico/a (Penicilina)',
-      'Tuvo una hemorragia excesiva',
-      'Está embarazada',
-      'Tiene asma',
-      'Es fumador',
-      'Suele crujir los dientes',
-    ],
-  }
+  // Cargar procedimientos del paciente
+  const { data: proceduresData, isLoading: proceduresLoading } = useQuery({
+    queryKey: ['patient-procedures', patientId],
+    queryFn: async () => {
+      if (!patientId) return []
+      const response = await api.get(`/patients/${patientId}/procedures`)
+      return response.data.data || []
+    },
+    enabled: !!patientId,
+  })
 
-  // Mock data de procedimientos
-  const allProcedures = [
-    {
-      id: 1,
-      name: 'CIRUGÍA EI (17)',
-      status: 'finalizado' as const,
-      date: '15/11/2025',
-    },
-    {
-      id: 2,
-      name: 'ENDODONCIA (24)',
-      status: 'proceso' as const,
-      date: '20/11/2025',
-    },
-    {
-      id: 3,
-      name: 'PRÓTESIS FIJA (11-21)',
-      status: 'disponible' as const,
-      date: null,
-    },
-    {
-      id: 4,
-      name: 'OPERATORIA (36)',
-      status: 'disponible' as const,
-      date: null,
-    },
-    {
-      id: 5,
-      name: 'PERIODONCIA (46)',
-      status: 'proceso' as const,
-      date: '22/11/2025',
-    },
-    {
-      id: 6,
-      name: 'CIRUGÍA ED (48)',
-      status: 'finalizado' as const,
-      date: '10/11/2025',
-    },
-  ]
+  // Transformar datos del paciente al formato esperado
+  const patient = useMemo(() => {
+    if (!patientData) return null
+    
+    const anamnesisItems: string[] = []
+    if (patientData.has_pain) anamnesisItems.push('Tiene dolores')
+    if (patientData.is_nervous) anamnesisItems.push('Tiene nervios por el procedimiento')
+    if (patientData.bad_experience) anamnesisItems.push('Tuvo una mala experiencia')
+    if (patientData.has_been_hospitalized) anamnesisItems.push('Se ha hospitalizado')
+    if (patientData.under_medical_care) anamnesisItems.push('Fue atendido/a en los últimos años por un médico')
+    if (patientData.takes_medications) anamnesisItems.push(`Ha tomado medicamentos (${patientData.medications_description || 'No especificado'})`)
+    if (patientData.has_allergies) anamnesisItems.push(`Es alérgico/a (${patientData.allergies_description || 'No especificado'})`)
+    if (patientData.excessive_bleeding) anamnesisItems.push('Tuvo una hemorragia excesiva')
+    if (patientData.is_pregnant) anamnesisItems.push('Está embarazada')
+    if (patientData.has_asthma) anamnesisItems.push('Tiene asma')
+    if (patientData.is_smoker) anamnesisItems.push('Es fumador')
+    if (patientData.grinds_teeth) anamnesisItems.push('Suele crujir los dientes')
 
-  const filteredProcedures = allProcedures.filter(p => p.status === activeTab)
+    return {
+      id: patientData.id,
+      name: patientData.full_name || `${patientData.first_name} ${patientData.last_name}`,
+      age: patientData.age || 0,
+      gender: patientData.gender === 'M' ? 'Masculino' : patientData.gender === 'F' ? 'Femenino' : patientData.gender || '',
+      city: patientData.city || '',
+      university: patientData.faculty?.name || '',
+      address: patientData.address || '',
+      document: patientData.document || '',
+      phone: patientData.phone || '',
+      email: patientData.email || '',
+      civilStatus: patientData.civil_status || '',
+      weight: patientData.weight ? `${patientData.weight} kg` : '',
+      height: patientData.height ? `${patientData.height}` : '',
+      admissionDate: patientData.created_at ? new Date(patientData.created_at).toLocaleDateString('es-PY') : '',
+      anamnesis: anamnesisItems,
+    }
+  }, [patientData])
+
+  // Transformar procedimientos al formato esperado
+  const allProcedures = useMemo(() => {
+    return (proceduresData || []).map((proc: PatientProcedure) => ({
+      id: proc.id,
+      name: `${proc.treatment?.name || 'Procedimiento'} ${proc.tooth_fdi ? `(${proc.tooth_fdi})` : ''}`,
+      status: proc.status as 'disponible' | 'proceso' | 'finalizado',
+      date: proc.updated_at ? new Date(proc.updated_at).toLocaleDateString('es-PY') : null,
+    }))
+  }, [proceduresData])
+
+  const filteredProcedures = allProcedures.filter((p: any) => p.status === activeTab)
 
   const procedureCounts = {
-    disponible: allProcedures.filter(p => p.status === 'disponible').length,
-    proceso: allProcedures.filter(p => p.status === 'proceso').length,
-    finalizado: allProcedures.filter(p => p.status === 'finalizado').length,
+    disponible: allProcedures.filter((p: any) => p.status === 'disponible').length,
+    proceso: allProcedures.filter((p: any) => p.status === 'proceso').length,
+    finalizado: allProcedures.filter((p: any) => p.status === 'finalizado').length,
   }
 
   // Verificar si el alumno tiene al menos un procedimiento activo con este paciente
-  const hasActiveProcedure = allProcedures.some(p => p.status === 'proceso')
+  const hasActiveProcedure = allProcedures.some((p: any) => p.status === 'proceso')
+
+  const isLoading = patientLoading || proceduresLoading
 
   const handleCall = () => {
+    if (!patient?.phone) return
     Linking.openURL(`tel:${patient.phone}`)
   }
 
   const handleWhatsApp = () => {
+    if (!patient?.phone || !patient?.name) return
     const message = encodeURIComponent(`Hola ${patient.name}, te contacto desde OdontoPacientes`)
     Linking.openURL(`whatsapp://send?phone=595${patient.phone.replace(/^0/, '')}&text=${message}`)
   }
@@ -148,35 +160,53 @@ export default function PatientDetailScreen({ navigation }: any) {
     }
   }
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <AppHeader onMenuPress={handleMenuPress} />
-
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.titleContainer}>
-          <AppText variant="h2" color="brandNavy" weight="bold">
-            Ficha Paciente
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.brandTurquoise} />
+          <AppText color="textSecondary" style={styles.loadingText}>
+            Cargando datos del paciente...
           </AppText>
-          <View style={styles.headerButtons}>
+        </View>
+      </View>
+    )
+  }
+
+  if (!patient) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <AppText color="textSecondary">No se encontró el paciente</AppText>
+          <TouchableOpacity style={styles.goBackButton} onPress={() => navigation.goBack()}>
+            <AppText color="white" weight="semibold">Volver</AppText>
+          </TouchableOpacity>
+        </View>
+      </View>
+    )
+  }
+
+  return (
+    <View style={styles.container}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <View style={styles.titleSection}>
+          <AppText variant="h2" color="brandNavy" weight="bold">
+            Ficha del Paciente
+          </AppText>
+          <View style={styles.actionButtons}>
             <TouchableOpacity 
-              style={styles.addProcedureButton}
+              style={styles.smallActionButton}
               onPress={() => navigation.navigate('CreateProcedure' as never, { patientId: patient.id } as never)}
             >
-              <Ionicons name="add-circle-outline" size={20} color={colors.white} />
-              <AppText color="white" weight="semibold" style={styles.buttonText}>Agregar Procedimiento</AppText>
+              <Ionicons name="add-circle-outline" size={16} color={colors.white} />
+              <AppText color="white" weight="semibold" style={styles.smallButtonText}>Agregar Procedimiento</AppText>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={styles.editButton}
+              style={styles.smallEditButton}
               onPress={() => navigation.navigate('EditPatient' as never, { patientId: patient.id } as never)}
             >
-              <Ionicons name="create-outline" size={20} color={colors.white} />
-              <AppText color="white" weight="semibold" style={styles.buttonText}>Editar</AppText>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <AppText color="white" weight="semibold">Volver</AppText>
+              <Ionicons name="create-outline" size={16} color={colors.white} />
+              <AppText color="white" weight="semibold" style={styles.smallButtonText}>Editar Ficha</AppText>
             </TouchableOpacity>
           </View>
         </View>
@@ -202,28 +232,28 @@ export default function PatientDetailScreen({ navigation }: any) {
 
         <View style={styles.section}>
           <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Dirección</AppText>
-          <AppText color="textMuted" style={styles.infoValue}>{patient.address}</AppText>
+          <AppText color="textMuted" style={styles.infoValue}>{patient.address || '-'}</AppText>
 
           <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Cédula de Identidad</AppText>
-          <AppText color="textMuted" style={styles.infoValue}>{patient.document}</AppText>
+          <AppText color="textMuted" style={styles.infoValue}>{patient.document || '-'}</AppText>
 
           <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Teléfono</AppText>
-          <AppText color="textMuted" style={styles.infoValue}>{patient.phone}</AppText>
+          <AppText color="textMuted" style={styles.infoValue}>{patient.phone || '-'}</AppText>
 
           <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Email</AppText>
-          <AppText color="textMuted" style={styles.infoValue}>{patient.email}</AppText>
+          <AppText color="textMuted" style={styles.infoValue}>{patient.email || '-'}</AppText>
 
           <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Estado Civil</AppText>
-          <AppText color="textMuted" style={styles.infoValue}>{patient.civilStatus}</AppText>
+          <AppText color="textMuted" style={styles.infoValue}>{patient.civilStatus || '-'}</AppText>
 
           <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Peso</AppText>
-          <AppText color="textMuted" style={styles.infoValue}>{patient.weight}</AppText>
+          <AppText color="textMuted" style={styles.infoValue}>{patient.weight || '-'}</AppText>
 
           <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Estatura</AppText>
-          <AppText color="textMuted" style={styles.infoValue}>{patient.height}</AppText>
+          <AppText color="textMuted" style={styles.infoValue}>{patient.height || '-'}</AppText>
 
           <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Fecha de Admisión</AppText>
-          <AppText color="textMuted" style={styles.infoValue}>{patient.admissionDate}</AppText>
+          <AppText color="textMuted" style={styles.infoValue}>{patient.admissionDate || '-'}</AppText>
         </View>
 
         <View style={styles.section}>
@@ -249,7 +279,7 @@ export default function PatientDetailScreen({ navigation }: any) {
             </AppText>
             {hasActiveProcedure && (
               <TouchableOpacity 
-                style={styles.editButton}
+                style={styles.odontogramEditButton}
                 onPress={() => navigation.navigate('Odontogram' as never)}
               >
                 <AppText color="white" weight="semibold">Editar</AppText>
@@ -310,14 +340,12 @@ export default function PatientDetailScreen({ navigation }: any) {
           </View>
 
           {filteredProcedures.length > 0 ? (
-            filteredProcedures.map((procedure) => (
+            filteredProcedures.map((procedure: { id: number; name: string; status: string; date: string | null }) => (
               <TouchableOpacity
                 key={procedure.id}
                 style={styles.procedureCard}
                 onPress={() => {
-                  if (procedure.status === 'finalizado' || procedure.status === 'proceso') {
-                    navigation.navigate('ProcedureView', { procedureId: procedure.id })
-                  }
+                  navigation.navigate('ProcedureView' as never, { procedureId: procedure.id } as never)
                 }}
               >
                 <View style={styles.procedureHeader}>
@@ -356,7 +384,7 @@ export default function PatientDetailScreen({ navigation }: any) {
 
         <View style={styles.spacer} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }
 
@@ -409,43 +437,48 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.lg,
   },
-  titleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
+  titleSection: {
+    marginBottom: spacing.md,
     paddingHorizontal: spacing.lg,
   },
-  headerButtons: {
+  actionButtons: {
     flexDirection: 'row',
     gap: spacing.sm,
+    marginTop: spacing.sm,
   },
-  addProcedureButton: {
+  smallActionButton: {
     backgroundColor: colors.success,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 8,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: 4,
   },
-  editButton: {
+  smallEditButton: {
     backgroundColor: colors.brandTurquoise,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  smallButtonText: {
+    fontSize: 12,
+  },
+  goBackButton: {
+    backgroundColor: colors.brandNavy,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
+    marginTop: spacing.md,
   },
-  buttonText: {
-    marginLeft: 4,
-  },
-  backButton: {
-    backgroundColor: colors.brandNavy,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: 8,
+  odontogramEditButton: {
+    backgroundColor: colors.brandTurquoise,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: 6,
   },
   patientCard: {
     backgroundColor: colors.brandTurquoise,
@@ -558,5 +591,15 @@ const styles = StyleSheet.create({
   },
   spacer: {
     height: spacing.xxl,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxl,
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    fontSize: 14,
   },
 })

@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRoute, useNavigation } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import { AppText, AppButton } from '../components/ui'
-import { AppHeader } from '../components/AppHeader'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
 import { api } from '../lib/api'
@@ -25,7 +23,7 @@ export default function ProcedureViewScreen() {
   const fetchProcedureDetails = async () => {
     try {
       setLoading(true)
-      const response = await api.patients.get(procedureId)
+      const response = await api.procedures.get(procedureId)
       setProcedure(response.data.data)
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.message || 'No se pudo cargar el procedimiento')
@@ -68,7 +66,7 @@ export default function ProcedureViewScreen() {
         {
           text: 'Abandonar',
           style: 'destructive',
-          onPress: async (reason) => {
+          onPress: async (reason: string | undefined) => {
             if (!reason || reason.trim() === '') {
               Alert.alert('Error', 'Debes indicar un motivo')
               return
@@ -90,30 +88,24 @@ export default function ProcedureViewScreen() {
     )
   }
 
-  const handleMenuPress = () => {
-    // Implementar menú si es necesario
-  }
-
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <AppHeader onMenuPress={handleMenuPress} />
+      <View style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.brandTurquoise} />
           <AppText color="textMuted" style={styles.loadingText}>Cargando procedimiento...</AppText>
         </View>
-      </SafeAreaView>
+      </View>
     )
   }
 
   if (!procedure) {
     return (
-      <SafeAreaView style={styles.container}>
-        <AppHeader onMenuPress={handleMenuPress} />
+      <View style={styles.container}>
         <View style={styles.loadingContainer}>
           <AppText color="error">No se pudo cargar el procedimiento</AppText>
         </View>
-      </SafeAreaView>
+      </View>
     )
   }
 
@@ -122,9 +114,7 @@ export default function ProcedureViewScreen() {
   const procedurePhotos = procedure.photos || []
 
   return (
-    <SafeAreaView style={styles.container}>
-      <AppHeader onMenuPress={handleMenuPress} />
-
+    <View style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.titleContainer}>
           <AppText variant="h2" color="brandNavy" weight="bold">
@@ -210,7 +200,7 @@ export default function ProcedureViewScreen() {
             </View>
             <TouchableOpacity 
               style={styles.viewFileButton}
-              onPress={() => navigation.navigate('PatientDetail' as never, { patientId: procedure.patient_id } as never)}
+              onPress={() => (navigation as any).navigate('PatientDetail', { patientId: procedure.patient_id })}
             >
               <AppText color="white" weight="semibold" style={styles.viewFileButtonText}>
                 Ver Ficha
@@ -260,7 +250,7 @@ export default function ProcedureViewScreen() {
 
         <View style={styles.spacer} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }
 

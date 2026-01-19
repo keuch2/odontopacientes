@@ -1,10 +1,8 @@
 import React, { useState } from 'react'
 import { View, StyleSheet, ScrollView, TouchableOpacity, Linking, Modal, TextInput, Alert, ActivityIndicator } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Ionicons } from '@expo/vector-icons'
 import { AppText } from '../components/ui'
-import { AppHeader } from '../components/AppHeader'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
 import { api } from '../lib/api'
@@ -161,21 +159,19 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <AppHeader />
+      <View style={styles.container}>
         <View style={styles.loadingContainer}>
           <AppText variant="body" color="textSecondary">
             Cargando información...
           </AppText>
         </View>
-      </SafeAreaView>
+      </View>
     )
   }
 
   if (error || !data) {
     return (
-      <SafeAreaView style={styles.container}>
-        <AppHeader />
+      <View style={styles.container}>
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={60} color={colors.error} />
           <AppText variant="h3" color="error" style={{ marginTop: spacing.md }}>
@@ -185,22 +181,16 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
             No se pudo cargar la información de la asignación
           </AppText>
         </View>
-      </SafeAreaView>
+      </View>
     )
   }
 
-  const statusConfig = STATUS_CONFIG[data.status]
+  const statusConfig = STATUS_CONFIG[data.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.activa
   const progress = (data.sessions_completed / data.patient_procedure.treatment.estimated_sessions) * 100
   const age = new Date().getFullYear() - new Date(data.patient_procedure.patient.birth_date).getFullYear()
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <AppHeader
-        title="Detalle de Asignación"
-        showBack
-        onBackPress={() => navigation.goBack()}
-      />
-
+    <View style={styles.container}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -576,7 +566,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   )
 }
 

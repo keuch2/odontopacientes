@@ -185,6 +185,9 @@ class ApiClient {
 
   // Métodos de procedimientos
   procedures = {
+    get: (id: number): Promise<AxiosResponse<ApiResponse<any>>> =>
+      this.client.get(`/patient-procedures/${id}`),
+
     create: (data: { patient_id: number, treatment_id: number, chair_id: number, description?: string }): Promise<AxiosResponse<ApiResponse>> =>
       this.client.post('/patient-procedures', data),
 
@@ -210,6 +213,28 @@ class ApiClient {
       this.client.post(`/my-assignments/${id}/abandon`, data),
   }
 
+  // Métodos de usuarios
+  users = {
+    updateProfile: (data: {
+      name: string
+      phone?: string
+      birth_date?: string
+      city?: string
+      institution?: string
+      course?: string
+      facebook?: string
+      instagram?: string
+      tiktok?: string
+    }): Promise<AxiosResponse<ApiResponse<User>>> =>
+      this.client.put('/profile', data),
+
+    uploadProfileImage: (imageBase64: string): Promise<AxiosResponse<ApiResponse<{ profile_image: string, profile_image_url: string }>>> =>
+      this.client.post('/profile/image', { image: imageBase64 }),
+
+    changePassword: (data: { current_password?: string, password: string, password_confirmation: string }): Promise<AxiosResponse<ApiResponse>> =>
+      this.client.post('/auth/change-password', data),
+  }
+
   // Métodos de estadísticas
   stats = {
     getDashboard: (): Promise<AxiosResponse<ApiResponse<any>>> =>
@@ -231,6 +256,15 @@ class ApiClient {
       this.client.get('/recent-activity'),
   }
 
+  // Métodos de anuncios (público)
+  ads = {
+    getActive: (position: string = 'dashboard_banner'): Promise<AxiosResponse<ApiResponse<any[]>>> =>
+      this.client.get('/public/ads', { params: { position } }),
+
+    trackClick: (id: number): Promise<AxiosResponse<ApiResponse>> =>
+      this.client.post(`/ads/${id}/click`),
+  }
+
   // Métodos de fotos
   photos = {
     upload: (assignmentId: number, formData: FormData): Promise<AxiosResponse<ApiResponse>> =>
@@ -242,6 +276,23 @@ class ApiClient {
 
     delete: (assignmentId: number, photoId: number): Promise<AxiosResponse<ApiResponse>> =>
       this.client.delete(`/assignments/${assignmentId}/photos/${photoId}`),
+  }
+
+  // Métodos genéricos para llamadas directas
+  get<T = any>(url: string, config?: any): Promise<AxiosResponse<T>> {
+    return this.client.get(url, config)
+  }
+
+  post<T = any>(url: string, data?: any, config?: any): Promise<AxiosResponse<T>> {
+    return this.client.post(url, data, config)
+  }
+
+  put<T = any>(url: string, data?: any, config?: any): Promise<AxiosResponse<T>> {
+    return this.client.put(url, data, config)
+  }
+
+  delete<T = any>(url: string, config?: any): Promise<AxiosResponse<T>> {
+    return this.client.delete(url, config)
   }
 }
 

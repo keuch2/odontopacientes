@@ -1,120 +1,132 @@
-import React, { useState, useMemo, useEffect } from 'react'
-import { View, StyleSheet, ScrollView, TouchableOpacity, Image, ImageBackground, ActivityIndicator } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import React, { useState } from 'react'
+import { View, StyleSheet, ScrollView, TouchableOpacity, Image, ImageBackground, ActivityIndicator, Alert, Linking } from 'react-native'
+import { useQuery } from '@tanstack/react-query'
 import { AppText } from '../components/ui'
-import { AppHeader } from '../components/AppHeader'
 import { SearchBar } from '../components/SearchBar'
 import { PatientCard } from '../components/PatientCard'
 import { useDebounce } from '../hooks/useDebounce'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
+import { api } from '../lib/api'
 
-const catedras = [
-  { id: 1, name: 'Cirugías', icon: require('../../assets/images/catedras/cirugias.png') },
-  { id: 2, name: 'Periodoncia', icon: require('../../assets/images/catedras/periodoncia.png') },
-  { id: 3, name: 'Pediatría', icon: require('../../assets/images/catedras/pediatria.png') },
-  { id: 4, name: 'Operatoria', icon: require('../../assets/images/catedras/operatoria.png') },
-  { id: 5, name: 'Endodoncia', icon: require('../../assets/images/catedras/endodoncia.png') },
-  { id: 6, name: 'Prótesis', icon: require('../../assets/images/catedras/protesis.png') },
-  { id: 7, name: 'Preventiva', icon: require('../../assets/images/catedras/preventiva.png') },
-  { id: 8, name: 'Implantes', icon: require('../../assets/images/catedras/implantes.png') },
-]
+interface Chair {
+  id: number
+  name: string
+  key: string
+  color: string
+}
 
-const mockPatients = [
-  {
-    id: 1,
-    name: 'Cármen Herrera',
-    age: 20,
-    city: 'Villarrica',
-    university: 'Universidad del Norte',
-    catedra: 'Cirugías',
-    tratamientos: ['CIRUGÍA SIMPLE', 'EXTRACCIÓN'],
-    disponibles: 3,
-    enProceso: 3,
-    finalizados: 3,
-  },
-  {
-    id: 2,
-    name: 'Juan Pérez',
-    age: 35,
-    city: 'Asunción',
-    university: 'Universidad Nacional',
-    catedra: 'Periodoncia',
-    tratamientos: ['LIMPIEZA DENTAL', 'TRATAMIENTO PERIODONTAL'],
-    disponibles: 2,
-    enProceso: 1,
-    finalizados: 5,
-  },
-  {
-    id: 3,
-    name: 'María González',
-    age: 28,
-    city: 'Encarnación',
-    university: 'Universidad del Norte',
-    catedra: 'Endodoncia',
-    tratamientos: ['ENDODONCIA', 'CONDUCTO'],
-    disponibles: 1,
-    enProceso: 2,
-    finalizados: 4,
-  },
-  {
-    id: 4,
-    name: 'Pedro Martínez',
-    age: 42,
-    city: 'Villarrica',
-    university: 'Universidad Católica',
-    catedra: 'Prótesis',
-    tratamientos: ['PRÓTESIS DENTAL', 'CORONA'],
-    disponibles: 4,
-    enProceso: 0,
-    finalizados: 2,
-  },
-]
+interface PatientSearchResult {
+  id: number
+  full_name: string
+  age: number
+  city: string
+  phone: string
+  procedures_count?: {
+    disponible: number
+    proceso: number
+    finalizado: number
+  }
+}
+
+interface Ad {
+  id: number
+  title: string
+  image_url: string
+  link_url: string | null
+}
+
+const catedraIcons: Record<string, any> = {
+  'cirugias': require('../../assets/images/catedras/cirugias.png'),
+  'periodoncia': require('../../assets/images/catedras/periodoncia.png'),
+  'pediatria': require('../../assets/images/catedras/pediatria.png'),
+  'operatoria': require('../../assets/images/catedras/operatoria.png'),
+  'endodoncia': require('../../assets/images/catedras/endodoncia.png'),
+  'protesis': require('../../assets/images/catedras/protesis.png'),
+  'preventiva': require('../../assets/images/catedras/preventiva.png'),
+  'implantes': require('../../assets/images/catedras/implantes.png'),
+}
+
+const defaultIcon = require('../../assets/images/catedras/operatoria.png')
 
 export default function CatedrasScreen({ navigation }: any) {
   const [searchText, setSearchText] = useState('')
-  const [isSearching, setIsSearching] = useState(false)
   const debouncedSearchText = useDebounce(searchText, 500)
 
-  const handleMenuPress = () => {
-    console.log('Abrir menú')
+  // Cargar banners publicitarios desde la API
+  const { data: adsData } = useQuery({
+    queryKey: ['ads', 'dashboard_banner'],
+    queryFn: async () => {
+      try {
+        const response = await api.ads.getActive('dashboard_banner')
+        return response.data.data || []
+      } catch (error) {
+        console.log('Error fetching ads, using fallback')
+        return []
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const activeBanner = (adsData as Ad[] || [])[0]
+
+  const handleBannerPress = async () => {
+    if (activeBanner?.link_url) {
+      try {
+        await api.ads.trackClick(activeBanner.id)
+        await Linking.openURL(activeBanner.link_url)
+      } catch (error) {
+        console.log('Error opening banner link')
+      }
+    }
   }
 
-  // Simular loading cuando el usuario está escribiendo
-  useEffect(() => {
-    if (searchText !== debouncedSearchText && searchText.trim().length > 0) {
-      setIsSearching(true)
-    } else {
-      setIsSearching(false)
-    }
-  }, [searchText, debouncedSearchText])
+  // Cargar cátedras desde la API
+  const { data: chairsData, isLoading: chairsLoading } = useQuery({
+    queryKey: ['chairs'],
+    queryFn: async () => {
+      const response = await api.chairs.list()
+      return response.data.data
+    },
+    staleTime: 5 * 60 * 1000,
+  })
 
-  // Filtrar pacientes según el texto de búsqueda debounced (nombre, cátedra o tratamiento)
-  const filteredPatients = useMemo(() => {
-    if (!debouncedSearchText.trim()) return []
-    
-    // Aquí debería ir la llamada a la API
-    // const response = await api.patients.search({ q: debouncedSearchText })
-    
-    const searchLower = debouncedSearchText.toLowerCase()
-    return mockPatients.filter((patient) => {
-      const matchesName = patient.name.toLowerCase().includes(searchLower)
-      const matchesCatedra = patient.catedra.toLowerCase().includes(searchLower)
-      const matchesTratamiento = patient.tratamientos.some(t => 
-        t.toLowerCase().includes(searchLower)
-      )
-      return matchesName || matchesCatedra || matchesTratamiento
-    })
-  }, [debouncedSearchText])
+  // Buscar pacientes cuando hay texto de búsqueda
+  const { data: searchResults, isLoading: isSearching, error: searchError } = useQuery({
+    queryKey: ['patients-search', debouncedSearchText],
+    queryFn: async () => {
+      if (!debouncedSearchText.trim()) return []
+      const response = await api.patients.search({ q: debouncedSearchText })
+      return response.data.data || []
+    },
+    enabled: debouncedSearchText.trim().length > 0,
+  })
+
+  // Transformar datos de búsqueda al formato esperado por PatientCard
+  const filteredPatients = (searchResults || []).map((patient: any) => ({
+    id: patient.id,
+    name: patient.full_name || patient.name,
+    age: patient.age || 0,
+    city: patient.city || '',
+    university: patient.faculty?.name || patient.university || '',
+    catedra: patient.chair?.name || '',
+    tratamientos: patient.treatments?.map((t: any) => t.name) || [],
+    disponibles: patient.procedures_count?.disponible || 0,
+    enProceso: patient.procedures_count?.proceso || 0,
+    finalizados: patient.procedures_count?.finalizado || 0,
+  }))
 
   // Mostrar pacientes si hay texto de búsqueda, sino mostrar cátedras
   const shouldShowPatients = searchText.trim().length > 0
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <AppHeader onMenuPress={handleMenuPress} />
+  // Obtener icono para una cátedra basado en su key o nombre
+  const getChairIcon = (chair: Chair) => {
+    const key = (chair.key || chair.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    return catedraIcons[key] || defaultIcon
+  }
 
+  return (
+    <View style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Barra de búsqueda */}
         <View style={styles.searchWrapper}>
@@ -169,12 +181,25 @@ export default function CatedrasScreen({ navigation }: any) {
             // Mostrar grid de cátedras (pantalla inicial)
             <>
               {/* Banner Publicitario */}
-              <TouchableOpacity style={styles.bannerContainer} activeOpacity={0.9}>
-                <ImageBackground
-                  source={require('../../assets/images/banner_publicidad.png')}
-                  style={styles.banner}
-                  imageStyle={styles.bannerImage}
-                />
+              <TouchableOpacity 
+                style={styles.bannerContainer} 
+                activeOpacity={0.9}
+                onPress={handleBannerPress}
+                disabled={!activeBanner?.link_url}
+              >
+                {activeBanner?.image_url ? (
+                  <Image
+                    source={{ uri: activeBanner.image_url }}
+                    style={styles.banner}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <ImageBackground
+                    source={require('../../assets/images/banner_publicidad.png')}
+                    style={styles.banner}
+                    imageStyle={styles.bannerImage}
+                  />
+                )}
               </TouchableOpacity>
 
               {/* Título */}
@@ -183,30 +208,42 @@ export default function CatedrasScreen({ navigation }: any) {
               </AppText>
 
               {/* Grid de Cátedras */}
-              <View style={styles.grid}>
-                {catedras.map((catedra) => (
-                  <TouchableOpacity 
-                    key={catedra.id} 
-                    style={styles.catedraCard}
-                    onPress={() => navigation.navigate('ChairPatients', { chairName: catedra.name })}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.catedraIconContainer}>
-                      <Image source={catedra.icon} style={styles.catedraIcon} resizeMode="contain" />
-                    </View>
-                    <AppText color="white" weight="semibold" align="center" style={styles.catedraName}>
-                      {catedra.name}
-                    </AppText>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              {chairsLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={colors.brandTurquoise} />
+                  <AppText color="textSecondary" style={styles.loadingText}>
+                    Cargando cátedras...
+                  </AppText>
+                </View>
+              ) : (
+                <View style={styles.grid}>
+                  {(chairsData || []).map((chair: Chair) => (
+                    <TouchableOpacity 
+                      key={chair.id} 
+                      style={[styles.catedraCard, chair.color ? { backgroundColor: chair.color } : null]}
+                      onPress={() => navigation.navigate('ChairPatients', { 
+                        chairId: chair.id,
+                        chairName: chair.name 
+                      })}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.catedraIconContainer}>
+                        <Image source={getChairIcon(chair)} style={styles.catedraIcon} resizeMode="contain" />
+                      </View>
+                      <AppText color="white" weight="semibold" align="center" style={styles.catedraName}>
+                        {chair.name}
+                      </AppText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </>
           )}
 
           <View style={styles.spacer} />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }
 

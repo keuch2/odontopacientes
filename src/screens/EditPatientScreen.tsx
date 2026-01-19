@@ -5,6 +5,9 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { api } from '../lib/api'
+import { AppText } from '../components/ui'
+import { colors } from '../theme/colors'
+import { spacing } from '../theme/spacing'
 
 export default function EditPatientScreen() {
   const navigation = useNavigation()
@@ -129,16 +132,26 @@ export default function EditPatientScreen() {
 
   if (fetching) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.header}>
+          <AppText variant="h2" color="brandNavy" weight="bold">
+            Editar Ficha del Paciente
+          </AppText>
+        </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#00BCD4" />
+          <ActivityIndicator size="large" color={colors.brandTurquoise} />
         </View>
       </SafeAreaView>
     )
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={styles.header}>
+        <AppText variant="h2" color="brandNavy" weight="bold">
+          Editar Ficha del Paciente
+        </AppText>
+      </View>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <View style={styles.section}>
           <TextInput
@@ -276,6 +289,7 @@ export default function EditPatientScreen() {
             mode="outlined"
             onPress={() => navigation.goBack()}
             style={styles.cancelButton}
+            labelStyle={styles.cancelButtonLabel}
             disabled={loading}
           >
             Cancelar
@@ -283,7 +297,8 @@ export default function EditPatientScreen() {
           <Button
             mode="contained"
             onPress={handleSubmit}
-            style={styles.submitButton}
+            style={styles.saveButton}
+            buttonColor={colors.brandTurquoise}
             loading={loading}
             disabled={loading}
           >
@@ -299,6 +314,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  header: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   loadingContainer: {
     flex: 1,
@@ -326,15 +348,18 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 24,
-    marginBottom: 32,
+    gap: spacing.md,
+    marginTop: spacing.lg,
+    marginBottom: spacing.xl,
   },
   cancelButton: {
     flex: 1,
-    marginRight: 8,
+    borderColor: colors.brandNavy,
   },
-  submitButton: {
+  cancelButtonLabel: {
+    color: colors.brandNavy,
+  },
+  saveButton: {
     flex: 1,
-    marginLeft: 8,
   },
 })

@@ -10,30 +10,30 @@ import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
 import { api } from '../lib/api'
 
-export default function PatientsScreen() {
+export default function PatientsScreen({ navigation }: any) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedChair, setSelectedChair] = useState<string | null>(null)
 
-  const { data: chairs, isLoading: loadingChairs } = useQuery(['chairs'], async () => {
-    const response = await api.get('/chairs')
-    return response.data
+  const { data: chairs, isLoading: loadingChairs } = useQuery<any[]>({
+    queryKey: ['chairs'],
+    queryFn: async () => {
+      const response = await api.get('/chairs')
+      return response.data.data || []
+    },
   })
 
-  const { data: patients, isLoading: isLoading } = useQuery(
-    ['patients', searchQuery, selectedChair],
-    async () => {
+  const { data: patients, isLoading: isLoading } = useQuery<any[]>({
+    queryKey: ['patients', searchQuery, selectedChair],
+    queryFn: async () => {
       const response = await api.get('/patients', {
         params: {
           search: searchQuery,
           chair: selectedChair,
         },
       })
-      return response.data
+      return response.data.data || []
     },
-    {
-      keepPreviousData: true,
-    }
-  )
+  })
 
   const filteredPatients = useMemo(() => {
     if (!patients) return []
@@ -53,11 +53,10 @@ export default function PatientsScreen() {
           placeholder="Buscar pacientes..."
           onChangeText={setSearchQuery}
           value={searchQuery}
-          style={styles.searchbar}
         />
 
         {/* Filtros por cátedra */}
-        <AppText variant="titleMedium" style={styles.filterTitle}>
+        <AppText variant="body" weight="semibold" style={styles.filterTitle}>
           Filtros de Cátedras
         </AppText>
         {loadingChairs ? (
@@ -87,7 +86,7 @@ export default function PatientsScreen() {
               </AppText>
             </TouchableOpacity>
 
-            {chairs.map((chair: any) => (
+            {(chairs || []).map((chair: any) => (
               <TouchableOpacity
                 key={chair.id}
                 style={[
@@ -110,7 +109,7 @@ export default function PatientsScreen() {
         )}
 
         {/* Lista de pacientes */}
-        <AppText variant="titleMedium" style={styles.resultsTitle}>
+        <AppText variant="body" weight="semibold" style={styles.resultsTitle}>
           {filteredPatients.length} paciente{filteredPatients.length !== 1 ? 's' : ''} disponible{filteredPatients.length !== 1 ? 's' : ''}
         </AppText>
 
@@ -128,7 +127,7 @@ export default function PatientsScreen() {
                 No se encontraron pacientes
               </AppText>
               {(selectedChair || searchQuery) && (
-                <AppText color="textMuted" align="center" style={styles.emptyHint}>
+                <AppText color="textMuted" align="center" style={styles.emptyMessage}>
                   Intenta ajustar los filtros de búsqueda
                 </AppText>
               )}
@@ -139,11 +138,13 @@ export default function PatientsScreen() {
                 key={patient.id}
                 patient={{
                   id: patient.id,
-                  name: patient.full_name,
-                  age: patient.age,
-                  city: patient.city,
-                  procedures: patient.procedures?.map((p: any) => p.treatment?.name).join(', ') || 'Sin procedimientos',
-                  chair: patient.procedures?.[0]?.treatment?.chair?.key || 'general'
+                  name: patient.full_name || `${patient.first_name} ${patient.last_name}`,
+                  age: patient.age || 0,
+                  city: patient.city || '',
+                  university: patient.faculty?.name || '',
+                  disponibles: patient.procedures_count?.disponible || 0,
+                  enProceso: patient.procedures_count?.proceso || 0,
+                  finalizados: patient.procedures_count?.finalizado || 0,
                 }}
                 onPress={() => navigation.navigate('PatientDetail', { patientId: patient.id })}
               />

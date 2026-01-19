@@ -1,10 +1,8 @@
 import React from 'react'
 import { View, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ActivityIndicator } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
 import { Ionicons } from '@expo/vector-icons'
 import { AppText, AppCard } from '../components/ui'
-import { AppHeader } from '../components/AppHeader'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
 import { api } from '../lib/api'
@@ -56,10 +54,6 @@ export default function NotificationsScreen() {
     queryKey: ['notifications'],
     queryFn: () => api.notifications.list({ per_page: 20 }),
   })
-
-  const handleMenuPress = () => {
-    console.log('Abrir menú')
-  }
 
   const renderNotification = ({ item }: { item: Notification }) => {
     const icon = getNotificationIcon(item.type)
@@ -114,9 +108,7 @@ export default function NotificationsScreen() {
   )
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <AppHeader onMenuPress={handleMenuPress} />
-      
+    <View style={styles.container}>
       <View style={styles.header}>
         <AppText variant="h2" color="brandNavy" weight="bold">
           Notificaciones
@@ -155,7 +147,7 @@ export default function NotificationsScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-    </SafeAreaView>
+    </View>
   )
 }
 

@@ -1,10 +1,8 @@
 import React, { useState } from 'react'
 import { View, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
 import { Ionicons } from '@expo/vector-icons'
 import { AppText } from '../components/ui'
-import { AppHeader } from '../components/AppHeader'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
 import { api } from '../lib/api'
@@ -171,8 +169,7 @@ export default function MyPatientsScreen({ navigation }: any) {
 
   if (error) {
     return (
-      <SafeAreaView style={styles.container}>
-        <AppHeader />
+      <View style={styles.container}>
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={60} color={colors.error} />
           <AppText variant="h3" color="error" style={{ marginTop: spacing.md }}>
@@ -187,14 +184,12 @@ export default function MyPatientsScreen({ navigation }: any) {
             </AppText>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     )
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <AppHeader />
-
+    <View style={styles.container}>
       <View style={styles.content}>
         <View style={styles.header}>
           <AppText variant="h2" weight="bold" color="brandNavy">
@@ -229,7 +224,7 @@ export default function MyPatientsScreen({ navigation }: any) {
           showsVerticalScrollIndicator={false}
         />
       </View>
-    </SafeAreaView>
+    </View>
   )
 }
 

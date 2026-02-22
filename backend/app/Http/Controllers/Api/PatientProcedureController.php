@@ -74,7 +74,7 @@ class PatientProcedureController extends Controller
             'treatment_id' => $isAusente ? 'nullable|exists:treatments,id' : 'required|exists:treatments,id',
             'chair_id' => 'nullable|exists:chairs,id',
             'tooth_description' => 'nullable|string|max:255',
-            'tooth_fdi' => $isAusente ? 'required|string|max:10' : 'nullable|string|max:10',
+            'tooth_fdi' => 'required|string|max:10',
             'tooth_surface' => 'nullable|string|max:10',
             'notes' => 'nullable|string',
             'estimated_price' => 'nullable|numeric|min:0',

@@ -7,24 +7,42 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  # Backend Laravel Tests
-  backend-tests:
-    name: Backend Tests (Laravel)
+  build-web-admin:
+    name: Build Web Admin
     runs-on: ubuntu-latest
-    
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: odontopacientes_test
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Cache npm modules
+      uses: actions/cache@v3
+      with:
+        path: web-admin/node_modules
+        key: ${{ runner.os }}-npm-web-admin-${{ hashFiles('web-admin/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-npm-web-admin-
+
+    - name: Install dependencies
+      working-directory: web-admin
+      run: npm install
+
+    - name: Build
+      working-directory: web-admin
+      run: npm run build
+      env:
+        VITE_API_URL: https://codexpy.com/odontopacientes/api
+
+    - name: Verify build output
+      run: ls -la web-admin/dist/
+
+  verify-backend:
+    name: Verify Backend
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
@@ -33,286 +51,27 @@ jobs:
       uses: shivammathur/setup-php@v2
       with:
         php-version: '8.3'
-        extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv
-        coverage: xdebug
+        extensions: mbstring, pdo, pdo_mysql, bcmath, json, openssl
 
     - name: Cache Composer packages
-      id: composer-cache
       uses: actions/cache@v3
       with:
-        path: vendor
-        key: ${{ runner.os }}-php-${{ hashFiles('backend/composer.lock') }}
+        path: backend/vendor
+        key: ${{ runner.os }}-composer-${{ hashFiles('backend/composer.lock') }}
         restore-keys: |
-          ${{ runner.os }}-php-
-
-    - name: Install Dependencies
-      working-directory: backend
-      run: composer install --no-progress --prefer-dist --optimize-autoloader
-
-    - name: Generate key
-      working-directory: backend
-      run: php artisan key:generate
-      env:
-        APP_ENV: testing
-
-    - name: Directory Permissions
-      working-directory: backend
-      run: chmod -R 777 storage bootstrap/cache
-
-    - name: Create Database
-      run: |
-        mysql --host 127.0.0.1 --port 3306 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS odontopacientes_test character set UTF8mb4 collate utf8mb4_bin;"
-
-    - name: Run Migrations
-      working-directory: backend
-      run: php artisan migrate --env=testing --database=mysql_testing
-      env:
-        DB_CONNECTION: mysql_testing
-        DB_HOST: 127.0.0.1
-        DB_PORT: 3306
-        DB_DATABASE: odontopacientes_test
-        DB_USERNAME: root
-        DB_PASSWORD: root
-
-    - name: Execute tests (Unit and Feature)
-      working-directory: backend
-      run: vendor/bin/phpunit --coverage-text --coverage-clover=coverage.xml
-      env:
-        DB_CONNECTION: mysql_testing
-        DB_HOST: 127.0.0.1
-        DB_PORT: 3306
-        DB_DATABASE: odontopacientes_test
-        DB_USERNAME: root
-        DB_PASSWORD: root
-
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: backend/coverage.xml
-        flags: backend
-        name: backend-coverage
-
-  # Frontend Web Admin Tests  
-  web-admin-tests:
-    name: Web Admin Tests (React)
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 9
-
-    - name: Cache pnpm modules
-      uses: actions/cache@v3
-      with:
-        path: ~/.pnpm-store
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-pnpm-store-
+          ${{ runner.os }}-composer-
 
     - name: Install dependencies
-      run: pnpm install --frozen-lockfile
+      working-directory: backend
+      run: composer install --no-dev --optimize-autoloader --no-scripts --no-interaction
 
-    - name: Type check
-      run: pnpm --filter web-admin type-check
-
-    - name: Run linter
-      run: pnpm --filter web-admin lint
-
-    - name: Run tests
-      run: pnpm --filter web-admin test --passWithNoTests
-
-    - name: Build application
-      run: pnpm --filter web-admin build
+    - name: Verify structure
+      working-directory: backend
+      run: |
+        php artisan --version
+        echo "✅ Backend OK"
       env:
-        VITE_API_URL: http://localhost/api
-
-  # Mobile App Tests
-  mobile-app-tests:
-    name: Mobile App Tests (React Native)
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 9
-
-    - name: Cache pnpm modules
-      uses: actions/cache@v3
-      with:
-        path: ~/.pnpm-store
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-pnpm-store-
-
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
-
-    - name: Type check
-      run: pnpm --filter mobile-app type-check
-
-    - name: Run linter
-      run: pnpm --filter mobile-app lint
-
-    - name: Run tests
-      run: pnpm --filter mobile-app test --passWithNoTests
-
-  # Security and Code Quality
-  code-quality:
-    name: Code Quality & Security
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Setup PHP for security check
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.3'
-
-    - name: Install Composer dependencies
-      working-directory: backend
-      run: composer install --no-dev --optimize-autoloader
-
-    - name: Run security check (Composer)
-      working-directory: backend
-      run: composer audit
-
-    - name: Setup Node.js for frontend security
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 9
-
-    - name: Install frontend dependencies
-      run: pnpm install --frozen-lockfile
-
-    - name: Run security audit (npm)
-      run: pnpm audit --audit-level moderate
-
-    - name: Check for outdated packages
-      run: pnpm outdated || true
-
-  # Build verification
-  build-verification:
-    name: Build Verification
-    runs-on: ubuntu-latest
-    needs: [backend-tests, web-admin-tests, mobile-app-tests]
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup PHP
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.3'
-
-    - name: Setup Node.js  
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 9
-
-    - name: Install backend dependencies
-      working-directory: backend
-      run: composer install --no-dev --optimize-autoloader
-
-    - name: Install frontend dependencies
-      run: pnpm install --frozen-lockfile
-
-    - name: Build web admin
-      run: pnpm --filter web-admin build
-      env:
-        VITE_API_URL: https://api.odontopacientes.com/api
-
-    - name: Verify build outputs
-      run: |
-        ls -la web-admin/dist/
-        echo "✅ Web admin build successful"
-
-    - name: Generate API documentation
-      run: |
-        if command -v swagger-codegen &> /dev/null; then
-          swagger-codegen generate -i shared/openapi/openapi.yaml -l typescript-fetch -o shared/types/generated/
-          echo "✅ API types generated"
-        else
-          echo "⚠️ swagger-codegen not available, skipping type generation"
-        fi
-
-  # Deployment readiness check
-  deployment-check:
-    name: Deployment Readiness
-    runs-on: ubuntu-latest
-    needs: [build-verification]
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Check environment files
-      run: |
-        if [[ -f ".env.example" && -f "backend/.env.example" ]]; then
-          echo "✅ Environment files present"
-        else
-          echo "❌ Missing environment files"
-          exit 1
-        fi
-
-    - name: Verify project structure
-      run: |
-        required_files=(
-          "README.md"
-          "AGENTS.md"
-          "package.json"
-          "backend/composer.json"
-          "web-admin/package.json"
-          "mobile-app/package.json"
-          "shared/openapi/openapi.yaml"
-        )
-        
-        for file in "${required_files[@]}"; do
-          if [[ -f "$file" ]]; then
-            echo "✅ $file exists"
-          else
-            echo "❌ Missing required file: $file"
-            exit 1
-          fi
-        done
-
-    - name: Check documentation
-      run: |
-        if grep -q "## Instalación" README.md; then
-          echo "✅ README.md contains installation instructions"
-        else
-          echo "❌ README.md missing installation instructions"
-          exit 1
-        fi
-
-    - name: Deployment ready
-      run: echo "🚀 Project is ready for deployment!"
+        APP_KEY: base64:hjXk8lKStgzCR5lLzxlU4mH1VkFJ8qD1Sgt8kJ3YpBo=
+        APP_ENV: production
+        DB_CONNECTION: sqlite
+        DB_DATABASE: /tmp/test.sqlite

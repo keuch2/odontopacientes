@@ -88,6 +88,7 @@ export default function OdontogramScreen() {
   const [loading, setLoading] = useState(true)
   const [selectedTeeth, setSelectedTeeth] = useState<Set<string>>(new Set())
   const [modalVisible, setModalVisible] = useState(false)
+  const [prosthesisLoading, setProsthesisLoading] = useState(false)
   const [filterMenuVisible, setFilterMenuVisible] = useState(false)
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterChair, setFilterChair] = useState<string>('all')
@@ -135,10 +136,13 @@ export default function OdontogramScreen() {
 
   const proceduresByTooth = filteredProcedures.reduce((acc, procedure) => {
     if (procedure.tooth_fdi) {
-      if (!acc[procedure.tooth_fdi]) {
-        acc[procedure.tooth_fdi] = []
+      const teeth = procedure.tooth_fdi.split(',').map((t: string) => t.trim())
+      for (const tooth of teeth) {
+        if (!acc[tooth]) {
+          acc[tooth] = []
+        }
+        acc[tooth].push(procedure)
       }
-      acc[procedure.tooth_fdi].push(procedure)
     }
     return acc
   }, {} as Record<string, PatientProcedure[]>)
@@ -169,33 +173,75 @@ export default function OdontogramScreen() {
     })
   }
 
-  const selectAllUpper = () => {
-    const upper = (isPediatric ? PEDIATRIC_TOOTH_NUMBERS_UPPER : TOOTH_NUMBERS_UPPER).flat().map(String)
-    setSelectedTeeth(new Set(upper))
-  }
-
-  const selectAllLower = () => {
-    const lower = (isPediatric ? PEDIATRIC_TOOTH_NUMBERS_LOWER : TOOTH_NUMBERS_LOWER).flat().map(String)
-    setSelectedTeeth(new Set(lower))
-  }
-
-  const selectAll = () => {
-    const upper = (isPediatric ? PEDIATRIC_TOOTH_NUMBERS_UPPER : TOOTH_NUMBERS_UPPER).flat().map(String)
-    const lower = (isPediatric ? PEDIATRIC_TOOTH_NUMBERS_LOWER : TOOTH_NUMBERS_LOWER).flat().map(String)
-    setSelectedTeeth(new Set([...upper, ...lower]))
-  }
-
   const clearSelection = () => {
     setSelectedTeeth(new Set())
   }
 
   const hasActiveProsthesis = () => {
-    const prosthesisKeywords = ['prótesis', 'protesis', 'completa superior', 'completa inferior', 'completo']
+    const prosthesisKeywords = ['completa superior', 'completa inferior', 'completa total']
     return procedures.some(p => {
       if (p.status === 'finalizado' || p.status === 'cancelado') return false
       const treatmentName = (p.treatment?.name || '').toLowerCase()
       return prosthesisKeywords.some(kw => treatmentName.includes(kw))
     })
+  }
+
+  // Prosthesis treatment IDs (from DB)
+  const PROSTHESIS_TREATMENTS = {
+    upper: { id: 46, name: 'Completa Superior' },
+    lower: { id: 47, name: 'Completa Inferior' },
+    total: { id: 48, name: 'Completa Total' },
+  }
+  const PROSTHESIS_CHAIR_ID = 6
+
+  const getTeethForProsthesis = (type: 'upper' | 'lower' | 'total'): string[] => {
+    const upper = (isPediatric ? PEDIATRIC_TOOTH_NUMBERS_UPPER : TOOTH_NUMBERS_UPPER).flat().map(String)
+    const lower = (isPediatric ? PEDIATRIC_TOOTH_NUMBERS_LOWER : TOOTH_NUMBERS_LOWER).flat().map(String)
+    if (type === 'upper') return upper
+    if (type === 'lower') return lower
+    return [...upper, ...lower]
+  }
+
+  const handleProsthesis = (type: 'upper' | 'lower' | 'total') => {
+    if (hasActiveProsthesis()) {
+      Alert.alert('Prótesis activa', 'Ya existe una prótesis activa. Debes finalizar o cancelar la prótesis existente antes de crear una nueva.')
+      return
+    }
+    const treatment = PROSTHESIS_TREATMENTS[type]
+    const teeth = getTeethForProsthesis(type)
+    Alert.alert(
+      'Crear Prótesis',
+      `Esta acción creará un procedimiento de prótesis "${treatment.name}" para los dientes: ${teeth.join(', ')}.\n\n¿Quiere continuar?`,
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Sí',
+          onPress: () => createProsthesisProcedure(type),
+        },
+      ]
+    )
+  }
+
+  const createProsthesisProcedure = async (type: 'upper' | 'lower' | 'total') => {
+    const treatment = PROSTHESIS_TREATMENTS[type]
+    const teeth = getTeethForProsthesis(type)
+    setProsthesisLoading(true)
+    try {
+      await api.procedures.createForPatient(params?.patientId || 0, {
+        treatment_id: treatment.id,
+        chair_id: PROSTHESIS_CHAIR_ID,
+        tooth_fdi: teeth.join(','),
+        status: 'disponible',
+        notes: `Prótesis ${treatment.name} - ${teeth.length} dientes`,
+      })
+      Alert.alert('Éxito', `Prótesis "${treatment.name}" creada correctamente para ${teeth.length} dientes`)
+      loadProcedures()
+    } catch (error: any) {
+      console.error('Error creating prosthesis:', error)
+      Alert.alert('Error', error.response?.data?.message || 'No se pudo crear la prótesis')
+    } finally {
+      setProsthesisLoading(false)
+    }
   }
 
   const handleAddProcedure = () => {
@@ -395,16 +441,14 @@ export default function OdontogramScreen() {
         <Surface style={styles.quickSelectContainer}>
           <Text style={styles.quickSelectTitle}>Prótesis</Text>
           <View style={styles.quickSelectRow}>
-            <Button mode="outlined" onPress={selectAllUpper} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel}>Completo Superior</Button>
-            <Button mode="outlined" onPress={selectAllLower} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel}>Completo Inferior</Button>
-            <Button mode="outlined" onPress={selectAll} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel}>Completo Total</Button>
+            <Button mode="outlined" onPress={() => handleProsthesis('upper')} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel} disabled={prosthesisLoading}>Completo Superior</Button>
+            <Button mode="outlined" onPress={() => handleProsthesis('lower')} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel} disabled={prosthesisLoading}>Completo Inferior</Button>
+            <Button mode="outlined" onPress={() => handleProsthesis('total')} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel} disabled={prosthesisLoading}>Completo Total</Button>
           </View>
-          {selectedTeeth.size > 0 && (
+          {prosthesisLoading && (
             <View style={styles.selectedTeethInfo}>
-              <Text style={styles.selectedTeethInfoText}>
-                {selectedTeeth.size} dientes seleccionados
-              </Text>
-              <Button mode="text" onPress={clearSelection} compact labelStyle={styles.quickSelectClearLabel}>Limpiar</Button>
+              <ActivityIndicator size="small" />
+              <Text style={styles.selectedTeethInfoText}>Creando prótesis...</Text>
             </View>
           )}
         </Surface>

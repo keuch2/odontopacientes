@@ -53,11 +53,11 @@ class PatientController extends Controller
                     'city' => $patient->city,
                     'phone' => $patient->phone,
                     'document' => $patient->full_document,
-                    'faculty' => [
+                    'faculty' => $patient->faculty ? [
                         'id' => $patient->faculty->id,
                         'name' => $patient->faculty->name,
-                        'university' => $patient->faculty->university->name,
-                    ],
+                        'university' => $patient->faculty->university->name ?? null,
+                    ] : null,
                     'has_valid_consent' => $patient->hasValidConsent(),
                     'procedures_available' => $patient->availableProcedures()->count(),
                     'procedures_in_progress' => $patient->inProgressProcedures()->count(),
@@ -194,16 +194,16 @@ class PatientController extends Controller
                 'has_hypertension' => (bool) $patient->has_hypertension,
                 'smokes' => (bool) $patient->smokes,
                 'other_conditions' => $patient->other_conditions,
-                'faculty' => [
+                'faculty' => $patient->faculty ? [
                     'id' => $patient->faculty->id,
                     'name' => $patient->faculty->name,
                     'code' => $patient->faculty->code,
-                    'university' => [
+                    'university' => $patient->faculty->university ? [
                         'id' => $patient->faculty->university->id,
                         'name' => $patient->faculty->university->name,
                         'code' => $patient->faculty->university->code,
-                    ]
-                ],
+                    ] : null,
+                ] : null,
                 'created_by' => [
                     'id' => $patient->createdBy->id,
                     'name' => $patient->createdBy->name,

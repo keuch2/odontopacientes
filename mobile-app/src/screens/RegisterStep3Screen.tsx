@@ -53,8 +53,7 @@ export default function RegisterStep3Screen({ navigation }: any) {
         password: string
         phone: string
         birth_date?: string
-        course?: string
-        faculty?: string
+        university_id?: number
         profile_image?: string
       } = {
         name: registerData.fullName.trim(),
@@ -67,12 +66,8 @@ export default function RegisterStep3Screen({ navigation }: any) {
         payload.birth_date = birthDateIso
       }
 
-      if (registerData.course.trim()) {
-        payload.course = registerData.course.trim()
-      }
-
-      if (registerData.faculty.trim()) {
-        payload.faculty = registerData.faculty.trim()
+      if (registerData.university_id) {
+        payload.university_id = registerData.university_id
       }
 
       if (registerData.profileImageBase64) {

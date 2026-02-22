@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, StyleSheet, ScrollView, Alert, TouchableOpacity, Platform } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppText, AppInput, AppButton } from '../components/ui'
@@ -24,16 +24,32 @@ export default function RegisterStep1Screen({ navigation }: any) {
     Alert.alert(title, message)
   }
 
+  const [universities, setUniversities] = useState<{id: number, name: string}[]>([])
+  const [showUniversityPicker, setShowUniversityPicker] = useState(false)
+
   const [formData, setFormData] = useState({
     fullName: registerData.fullName || '',
     email: registerData.email || '',
     phone: registerData.phone || '',
     birthDate: registerData.birthDate || '',
-    course: registerData.course || '',
-    faculty: registerData.faculty || '',
+    university_id: registerData.university_id as number | null,
     password: registerData.password || '',
     confirmPassword: registerData.confirmPassword || '',
   })
+
+  useEffect(() => {
+    const fetchUniversities = async () => {
+      try {
+        const response = await api.universities.list()
+        if (response.data?.data) {
+          setUniversities(response.data.data)
+        }
+      } catch (error) {
+        console.error('Error fetching universities:', error)
+      }
+    }
+    fetchUniversities()
+  }, [])
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -105,12 +121,8 @@ export default function RegisterStep1Screen({ navigation }: any) {
       newErrors.birthDate = 'Selecciona una fecha válida'
     }
 
-    if (!formData.course.trim()) {
-      newErrors.course = 'El curso es requerido'
-    }
-
-    if (!formData.faculty.trim()) {
-      newErrors.faculty = 'La facultad es requerida'
+    if (!formData.university_id) {
+      newErrors.university_id = 'Debes seleccionar una universidad'
     }
 
     if (!formData.password) {
@@ -146,8 +158,7 @@ export default function RegisterStep1Screen({ navigation }: any) {
         email: formData.email,
         phone: formData.phone,
         birthDate: formData.birthDate,
-        course: formData.course,
-        faculty: formData.faculty,
+        university_id: formData.university_id,
         password: formData.password,
         confirmPassword: formData.confirmPassword,
       })
@@ -287,33 +298,60 @@ export default function RegisterStep1Screen({ navigation }: any) {
           </View>
 
           <View style={styles.inputWrapper}>
-            <AppInput
-              placeholder="Curso"
-              value={formData.course}
-              onChangeText={(text) => {
-                setFormData({...formData, course: text})
-                if (errors.course) setErrors({...errors, course: ''})
-              }}
-            />
-            {errors.course && (
-              <AppText color="error" variant="caption" style={styles.errorText}>
-                {errors.course}
+            <TouchableOpacity
+              style={[
+                styles.pickerButton,
+                errors.university_id ? styles.pickerButtonError : null,
+              ]}
+              onPress={() => setShowUniversityPicker(!showUniversityPicker)}
+              activeOpacity={0.7}
+            >
+              <AppText
+                color={formData.university_id ? 'textPrimary' : 'textMuted'}
+                style={styles.pickerButtonText}
+              >
+                {formData.university_id
+                  ? universities.find(u => u.id === formData.university_id)?.name || 'Universidad'
+                  : 'Seleccionar Universidad'}
               </AppText>
+              <AppText color="textMuted" style={styles.pickerArrow}>
+                {showUniversityPicker ? '▲' : '▼'}
+              </AppText>
+            </TouchableOpacity>
+            {showUniversityPicker && (
+              <View style={styles.pickerDropdown}>
+                {universities.length === 0 ? (
+                  <AppText color="textMuted" style={styles.pickerOption}>
+                    Cargando universidades...
+                  </AppText>
+                ) : (
+                  universities.map((uni) => (
+                    <TouchableOpacity
+                      key={uni.id}
+                      style={[
+                        styles.pickerOption,
+                        formData.university_id === uni.id && styles.pickerOptionSelected,
+                      ]}
+                      onPress={() => {
+                        setFormData({...formData, university_id: uni.id})
+                        setShowUniversityPicker(false)
+                        if (errors.university_id) setErrors({...errors, university_id: ''})
+                      }}
+                    >
+                      <AppText
+                        color={formData.university_id === uni.id ? 'brandTurquoise' : 'textPrimary'}
+                        weight={formData.university_id === uni.id ? 'semibold' : 'normal'}
+                      >
+                        {uni.name}
+                      </AppText>
+                    </TouchableOpacity>
+                  ))
+                )}
+              </View>
             )}
-          </View>
-
-          <View style={styles.inputWrapper}>
-            <AppInput
-              placeholder="Facultad"
-              value={formData.faculty}
-              onChangeText={(text) => {
-                setFormData({...formData, faculty: text})
-                if (errors.faculty) setErrors({...errors, faculty: ''})
-              }}
-            />
-            {errors.faculty && (
+            {errors.university_id && (
               <AppText color="error" variant="caption" style={styles.errorText}>
-                {errors.faculty}
+                {errors.university_id}
               </AppText>
             )}
           </View>
@@ -424,5 +462,43 @@ const styles = StyleSheet.create({
   },
   spacer: {
     height: spacing.xxl,
+  },
+  pickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md + 2,
+    backgroundColor: colors.white,
+  },
+  pickerButtonError: {
+    borderColor: '#EF4444',
+  },
+  pickerButtonText: {
+    flex: 1,
+  },
+  pickerArrow: {
+    marginLeft: spacing.sm,
+    fontSize: 12,
+  },
+  pickerDropdown: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    marginTop: 4,
+    backgroundColor: colors.white,
+    overflow: 'hidden',
+  },
+  pickerOption: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  pickerOptionSelected: {
+    backgroundColor: '#F0FAFA',
   },
 })

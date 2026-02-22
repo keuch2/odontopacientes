@@ -167,8 +167,7 @@ class AuthController extends Controller
             'password' => 'required|string|min:6',
             'phone' => 'required|string|max:20',
             'birth_date' => 'nullable|date',
-            'course' => 'nullable|string|max:100',
-            'faculty' => 'nullable|string|max:255',
+            'university_id' => 'nullable|exists:universities,id',
             'profile_image' => 'nullable|string',
         ]);
 
@@ -202,8 +201,9 @@ class AuthController extends Controller
                 'password' => Hash::make($request->password),
                 'role' => 'alumno',
                 'phone' => $request->phone,
-                'active' => true, // Cuenta activa automáticamente
+                'active' => true,
                 'profile_image' => $profileImagePath,
+                'university_id' => $request->university_id,
             ]);
 
             // Crear token de acceso
@@ -213,8 +213,7 @@ class AuthController extends Controller
             \App\Models\Audit::log('created', 'User', $user->id, [
                 'source' => 'mobile_app',
                 'role' => 'alumno',
-                'course' => $request->course,
-                'faculty' => $request->faculty,
+                'university_id' => $request->university_id,
             ]);
 
             return response()->json([

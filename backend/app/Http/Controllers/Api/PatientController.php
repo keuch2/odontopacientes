@@ -288,23 +288,14 @@ class PatientController extends Controller
             ], 401);
         }
 
-        // Use user's faculty_id if available, otherwise use first faculty in the system
-        $facultyId = $user['faculty_id'] ?? \App\Models\Faculty::first()?->id;
-        if (!$facultyId) {
-            return response()->json([
-                'message' => 'No existe ninguna facultad registrada en el sistema'
-            ], 422);
-        }
-
-        // Verificar que no exista paciente con mismo documento en la misma facultad
-        $existingPatient = Patient::where('faculty_id', $facultyId)
-            ->where('document_type', $request->document_type)
+        // Verificar que no exista paciente con mismo documento
+        $existingPatient = Patient::where('document_type', $request->document_type)
             ->where('document_number', $request->document_number)
             ->first();
 
         if ($existingPatient) {
             return response()->json([
-                'message' => 'Ya existe un paciente con este documento en la facultad',
+                'message' => 'Ya existe un paciente con este documento',
                 'errors' => [
                     'document_number' => ['Ya existe un paciente con este documento']
                 ]
@@ -312,7 +303,6 @@ class PatientController extends Controller
         }
 
         $patient = Patient::create([
-            'faculty_id' => $facultyId,
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
             'document_type' => $request->document_type,

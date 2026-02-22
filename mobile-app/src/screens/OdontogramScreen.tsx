@@ -83,9 +83,8 @@ export default function OdontogramScreen() {
   const [procedures, setProcedures] = useState<PatientProcedure[]>([])
   const [chairs, setChairs] = useState<Chair[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedTooth, setSelectedTooth] = useState<string | null>(null)
+  const [selectedTeeth, setSelectedTeeth] = useState<Set<string>>(new Set())
   const [modalVisible, setModalVisible] = useState(false)
-  const [preselectedTooth, setPreselectedTooth] = useState<string | undefined>(undefined)
   const [filterMenuVisible, setFilterMenuVisible] = useState(false)
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterChair, setFilterChair] = useState<string>('all')
@@ -156,23 +155,55 @@ export default function OdontogramScreen() {
 
   const handleToothPress = (toothNumber: number) => {
     const toothFdi = toothNumber.toString()
-    setSelectedTooth(selectedTooth === toothFdi ? null : toothFdi)
+    setSelectedTeeth(prev => {
+      const next = new Set(prev)
+      if (next.has(toothFdi)) {
+        next.delete(toothFdi)
+      } else {
+        next.add(toothFdi)
+      }
+      return next
+    })
   }
 
-  const handleAddProcedure = (toothFdi?: string) => {
-    setPreselectedTooth(toothFdi)
+  const selectAllUpper = () => {
+    const upper = (isPediatric ? PEDIATRIC_TOOTH_NUMBERS_UPPER : TOOTH_NUMBERS_UPPER).flat().map(String)
+    setSelectedTeeth(new Set(upper))
+  }
+
+  const selectAllLower = () => {
+    const lower = (isPediatric ? PEDIATRIC_TOOTH_NUMBERS_LOWER : TOOTH_NUMBERS_LOWER).flat().map(String)
+    setSelectedTeeth(new Set(lower))
+  }
+
+  const selectAll = () => {
+    const upper = (isPediatric ? PEDIATRIC_TOOTH_NUMBERS_UPPER : TOOTH_NUMBERS_UPPER).flat().map(String)
+    const lower = (isPediatric ? PEDIATRIC_TOOTH_NUMBERS_LOWER : TOOTH_NUMBERS_LOWER).flat().map(String)
+    setSelectedTeeth(new Set([...upper, ...lower]))
+  }
+
+  const clearSelection = () => {
+    setSelectedTeeth(new Set())
+  }
+
+  const handleAddProcedure = () => {
+    if (selectedTeeth.size === 0) {
+      Alert.alert('Seleccionar dientes', 'Debes seleccionar al menos un diente en el odontograma antes de agregar un procedimiento.')
+      return
+    }
     setModalVisible(true)
   }
 
   const handleModalSuccess = () => {
     loadProcedures()
     setModalVisible(false)
+    setSelectedTeeth(new Set())
   }
 
   const renderTooth = (toothNumber: number) => {
     const toothFdi = toothNumber.toString()
     const status = getToothStatus(toothFdi)
-    const isSelected = selectedTooth === toothFdi
+    const isSelected = selectedTeeth.has(toothFdi)
     const toothProcedures = proceduresByTooth[toothFdi] || []
     const procedureCount = toothProcedures.length
 
@@ -344,14 +375,38 @@ export default function OdontogramScreen() {
           </ScrollView>
         </Surface>
 
-        {/* Detalles del diente seleccionado */}
-        {selectedTooth && (
+        {/* Selección rápida para prótesis */}
+        <Surface style={styles.quickSelectContainer}>
+          <Text style={styles.quickSelectTitle}>Selección de dientes {selectedTeeth.size > 0 ? `(${selectedTeeth.size})` : ''}</Text>
+          <View style={styles.quickSelectRow}>
+            <Button mode="outlined" onPress={selectAllUpper} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel}>Superiores</Button>
+            <Button mode="outlined" onPress={selectAllLower} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel}>Inferiores</Button>
+            <Button mode="outlined" onPress={selectAll} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel}>Todos</Button>
+            {selectedTeeth.size > 0 && (
+              <Button mode="text" onPress={clearSelection} compact labelStyle={styles.quickSelectClearLabel}>Limpiar</Button>
+            )}
+          </View>
+          {selectedTeeth.size > 0 && (
+            <View style={styles.selectedTeethRow}>
+              {Array.from(selectedTeeth).sort((a, b) => Number(a) - Number(b)).map(t => (
+                <View key={t} style={styles.selectedToothChip}>
+                  <Text style={styles.selectedToothChipText}>{t}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </Surface>
+
+        {/* Detalles del diente seleccionado (solo si hay 1) */}
+        {selectedTeeth.size === 1 && (() => {
+          const singleTooth = Array.from(selectedTeeth)[0]
+          return (
           <Surface style={styles.detailsContainer}>
-            <Text style={styles.detailsTitle}>Diente {selectedTooth}</Text>
+            <Text style={styles.detailsTitle}>Diente {singleTooth}</Text>
             
-            {proceduresByTooth[selectedTooth] && proceduresByTooth[selectedTooth].length > 0 ? (
+            {proceduresByTooth[singleTooth] && proceduresByTooth[singleTooth].length > 0 ? (
               <View style={styles.proceduresList}>
-                {proceduresByTooth[selectedTooth].map((procedure) => (
+                {proceduresByTooth[singleTooth].map((procedure) => (
                   <TouchableOpacity
                     key={procedure.id}
                     activeOpacity={0.7}
@@ -391,7 +446,8 @@ export default function OdontogramScreen() {
               </View>
             )}
           </Surface>
-        )}
+          )
+        })()}
 
         {/* Leyenda */}
         <Surface style={styles.legend}>
@@ -429,9 +485,9 @@ export default function OdontogramScreen() {
       {/* FAB para agregar procedimiento */}
       <FAB
         icon="plus"
-        style={styles.fab}
-        onPress={() => handleAddProcedure(selectedTooth || undefined)}
-        label={selectedTooth ? `Agregar a diente ${selectedTooth}` : 'Agregar procedimiento'}
+        style={[styles.fab, selectedTeeth.size === 0 && styles.fabDisabled]}
+        onPress={handleAddProcedure}
+        label={selectedTeeth.size > 0 ? `Procedimiento (${selectedTeeth.size} dientes)` : 'Seleccionar dientes'}
       />
 
       {/* Modal para agregar procedimiento */}
@@ -440,7 +496,7 @@ export default function OdontogramScreen() {
         onDismiss={() => setModalVisible(false)}
         onSuccess={handleModalSuccess}
         patientId={params?.patientId || 0}
-        preselectedToothFdi={preselectedTooth}
+        selectedTeeth={Array.from(selectedTeeth)}
       />
     </SafeAreaView>
   )
@@ -710,5 +766,56 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: '#4CAF50',
     paddingVertical: 6,
+  },
+  fabDisabled: {
+    backgroundColor: '#9CA3AF',
+  },
+  quickSelectContainer: {
+    padding: 12,
+    marginBottom: 16,
+    borderRadius: 8,
+    elevation: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  quickSelectTitle: {
+    fontSize: 15,
+    fontWeight: 'bold' as const,
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  quickSelectRow: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    gap: 6,
+    alignItems: 'center' as const,
+  },
+  quickSelectButton: {
+    borderColor: '#3B82F6',
+  },
+  quickSelectLabel: {
+    fontSize: 12,
+  },
+  quickSelectClearLabel: {
+    fontSize: 12,
+    color: '#EF4444',
+  },
+  selectedTeethRow: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    gap: 4,
+    marginTop: 10,
+  },
+  selectedToothChip: {
+    backgroundColor: '#DBEAFE',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+  },
+  selectedToothChipText: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    color: '#1D4ED8',
   },
 })

@@ -31,7 +31,7 @@ interface AddProcedureModalProps {
   onDismiss: () => void;
   onSuccess: () => void;
   patientId: number;
-  preselectedToothFdi?: string;
+  selectedTeeth: string[];
 }
 
 const TOOTH_SURFACES = [
@@ -47,7 +47,7 @@ export default function AddProcedureModal({
   onDismiss,
   onSuccess,
   patientId,
-  preselectedToothFdi,
+  selectedTeeth,
 }: AddProcedureModalProps) {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
@@ -60,7 +60,6 @@ export default function AddProcedureModal({
   // Form fields
   const [selectedChairId, setSelectedChairId] = useState<number | null>(null);
   const [selectedTreatmentId, setSelectedTreatmentId] = useState<number | null>(null);
-  const [toothFdi, setToothFdi] = useState(preselectedToothFdi || '');
   const [toothSurface, setToothSurface] = useState('');
   const [status, setStatus] = useState('disponible');
   const [sessionsTotal, setSessionsTotal] = useState('1');
@@ -75,13 +74,6 @@ export default function AddProcedureModal({
       loadData();
     }
   }, [visible]);
-
-  // Update preselected tooth
-  useEffect(() => {
-    if (preselectedToothFdi) {
-      setToothFdi(preselectedToothFdi);
-    }
-  }, [preselectedToothFdi]);
 
   // Filter treatments by chair
   useEffect(() => {
@@ -117,19 +109,22 @@ export default function AddProcedureModal({
   };
 
   const handleSubmit = async () => {
+    if (selectedTeeth.length === 0) {
+      Alert.alert('Error', 'No hay dientes seleccionados');
+      return;
+    }
+
     if (isAbsent) {
-      if (!toothFdi) {
-        Alert.alert('Error', 'Debes indicar el número de diente ausente');
-        return;
-      }
       setLoading(true);
       try {
-        await api.procedures.createForPatient(patientId, {
-          tooth_fdi: toothFdi,
-          status: 'ausente',
-          notes: notes || 'Diente ausente',
-        });
-        Alert.alert('Éxito', 'Diente ausente registrado correctamente');
+        for (const toothFdi of selectedTeeth) {
+          await api.procedures.createForPatient(patientId, {
+            tooth_fdi: toothFdi,
+            status: 'ausente',
+            notes: notes || 'Diente ausente',
+          });
+        }
+        Alert.alert('Éxito', `${selectedTeeth.length} diente(s) marcado(s) como ausente(s)`);
         resetForm();
         onSuccess();
         onDismiss();
@@ -151,19 +146,21 @@ export default function AddProcedureModal({
 
     setLoading(true);
     try {
-      await api.procedures.createForPatient(patientId, {
-        treatment_id: selectedTreatmentId,
-        tooth_fdi: toothFdi || null,
-        tooth_surface: toothSurface || null,
-        is_repair: isRepair,
-        status: autoAssign ? 'proceso' : status,
-        sessions_total: parseInt(sessionsTotal) || 1,
-        sessions_completed: 0,
-        notes: notes || null,
-        auto_assign: autoAssign,
-      });
+      for (const toothFdi of selectedTeeth) {
+        await api.procedures.createForPatient(patientId, {
+          treatment_id: selectedTreatmentId,
+          tooth_fdi: toothFdi,
+          tooth_surface: toothSurface || null,
+          is_repair: isRepair,
+          status: autoAssign ? 'proceso' : status,
+          sessions_total: parseInt(sessionsTotal) || 1,
+          sessions_completed: 0,
+          notes: notes || null,
+          auto_assign: autoAssign,
+        });
+      }
 
-      Alert.alert('Éxito', 'Procedimiento agregado correctamente');
+      Alert.alert('Éxito', `Procedimiento agregado a ${selectedTeeth.length} diente(s)`);
       resetForm();
       onSuccess();
       onDismiss();
@@ -179,7 +176,6 @@ export default function AddProcedureModal({
   const resetForm = () => {
     setSelectedChairId(null);
     setSelectedTreatmentId(null);
-    setToothFdi(preselectedToothFdi || '');
     setToothSurface('');
     setStatus('disponible');
     setSessionsTotal('1');
@@ -223,17 +219,19 @@ export default function AddProcedureModal({
                   </View>
                 )}
 
-                {/* Tooth FDI */}
-                <TextInput
-                  label={isAbsent ? "Diente FDI *" : "Diente FDI (opcional)"}
-                  value={toothFdi}
-                  onChangeText={setToothFdi}
-                  mode="outlined"
-                  keyboardType="numeric"
-                  maxLength={2}
-                  style={styles.input}
-                  placeholder="Ej: 36"
-                />
+                {/* Dientes seleccionados */}
+                <View style={styles.selectedTeethSection}>
+                  <Text style={styles.selectedTeethLabel}>
+                    {isAbsent ? 'Dientes a marcar como ausentes:' : 'Dientes seleccionados:'}
+                  </Text>
+                  <View style={styles.selectedTeethChips}>
+                    {selectedTeeth.map(t => (
+                      <View key={t} style={styles.toothChip}>
+                        <Text style={styles.toothChipText}>{t}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
 
                 {!isAbsent && (
                 <>
@@ -596,5 +594,37 @@ const styles = StyleSheet.create({
   repairOptionTextSelected: {
     color: '#FFFFFF',
     fontWeight: '700' as const,
+  },
+  selectedTeethSection: {
+    marginBottom: 16,
+    backgroundColor: '#EFF6FF',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  selectedTeethLabel: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#1E40AF',
+    marginBottom: 8,
+  },
+  selectedTeethChips: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    gap: 6,
+  },
+  toothChip: {
+    backgroundColor: '#DBEAFE',
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+  },
+  toothChipText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: '#1D4ED8',
   },
 });

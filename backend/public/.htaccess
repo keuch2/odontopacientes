@@ -1,0 +1,36 @@
+<IfModule mod_headers.c>
+    # Handle CORS for preflight OPTIONS requests
+    SetEnvIf Request_Method OPTIONS IS_OPTIONS=1
+    SetEnvIf Origin "^http(s)?://(localhost:8081|localhost:3000|localhost:5173|127\.0\.0\.1:8081)$" CORS_ALLOW_ORIGIN=$0
+    Header always set Access-Control-Allow-Origin "%{CORS_ALLOW_ORIGIN}e" env=IS_OPTIONS
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" env=IS_OPTIONS
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept, Origin" env=IS_OPTIONS
+    Header always set Access-Control-Allow-Credentials "true" env=IS_OPTIONS
+    Header always set Access-Control-Max-Age "86400" env=IS_OPTIONS
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Respond to OPTIONS with 204 No Content
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=204,L]
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Send Requests To Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>

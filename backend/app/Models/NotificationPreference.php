@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class NotificationPreference extends Model
+{
+    protected $fillable = [
+        'user_id',
+        'treatment_id',
+        'enabled',
+    ];
+
+    protected $casts = [
+        'enabled' => 'boolean',
+    ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function treatment()
+    {
+        return $this->belongsTo(Treatment::class);
+    }
+}

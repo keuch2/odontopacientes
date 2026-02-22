@@ -1,0 +1,20 @@
+packages:
+  - web-admin
+  - mobile-app
+
+catalog:
+  '@tanstack/react-query': ^5.90.2
+  '@types/react': ^18.2.0
+  react: ^18.2.0
+  typescript: ^5.3.0
+
+prefer-workspace-packages: true
+
+shared-workspace-lockfile: true
+
+# Overrides para evitar conflictos de versiones entre proyectos
+pnpm:
+  overrides:
+    # Forzar React 18.3.x types para web-admin
+    "@types/react@^18.2.0": "18.3.12"
+    "@types/react-dom@^18.2.0": "18.3.5"

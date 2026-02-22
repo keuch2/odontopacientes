@@ -1,0 +1,28 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /odontopacientes/web-admin/
+  
+  # Redirigir todo a dist/
+  RewriteCond %{REQUEST_URI} !^/odontopacientes/web-admin/dist/
+  RewriteRule ^(.*)$ dist/$1 [L]
+  
+  # Si el archivo o directorio existe en dist/, servirlo directamente
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  
+  # De lo contrario, redirigir a dist/index.html
+  RewriteRule . /odontopacientes/web-admin/dist/index.html [L]
+</IfModule>
+
+# Habilitar compresión gzip
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# Configurar cache para assets
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+</IfModule>

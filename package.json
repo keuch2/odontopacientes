@@ -1,0 +1,50 @@
+{
+  "name": "odontopacientes-monorepo",
+  "version": "1.0.0",
+  "description": "Sistema de gestión de pacientes odontológicos para estudiantes",
+  "private": true,
+  "workspaces": [
+    "web-admin"
+  ],
+  "scripts": {
+    "dev": "pnpm -w --parallel dev",
+    "dev:web": "pnpm --filter web-admin dev",
+    "dev:mobile": "pnpm --filter mobile-app start",
+    "build": "pnpm -w --parallel build",
+    "build:web": "pnpm --filter web-admin build",
+    "build:mobile": "pnpm --filter mobile-app build",
+    "lint": "pnpm -w --parallel lint",
+    "lint:web": "pnpm --filter web-admin lint",
+    "lint:mobile": "pnpm --filter mobile-app lint",
+    "format": "prettier --write .",
+    "gen:types": "node scripts/generate-types.js",
+    "test": "pnpm -w --parallel test",
+    "clean": "pnpm -w --parallel clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.0",
+    "prettier": "^3.2.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "keywords": [
+    "odontologia",
+    "estudiantes",
+    "pacientes",
+    "laravel",
+    "react",
+    "react-native"
+  ],
+  "author": "Tu Nombre",
+  "license": "MIT",
+  "dependencies": {
+    "@babel/runtime": "^7.28.4"
+  }
+}

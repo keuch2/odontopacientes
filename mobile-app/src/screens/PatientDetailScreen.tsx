@@ -8,14 +8,14 @@ import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
 import { api } from '../lib/api'
 
-type TabType = 'disponible' | 'proceso' | 'finalizado'
+type TabType = 'disponible' | 'proceso' | 'finalizado' | 'cancelado'
 
 interface PatientProcedure {
   id: number
   treatment: { id: number; name: string; code: string }
   chair: { id: number; name: string }
   tooth_fdi: string | null
-  status: 'disponible' | 'proceso' | 'finalizado' | 'contraindicado'
+  status: 'disponible' | 'proceso' | 'finalizado' | 'contraindicado' | 'cancelado'
   created_at: string
   updated_at: string
 }
@@ -102,6 +102,7 @@ export default function PatientDetailScreen({ navigation }: any) {
     disponible: allProcedures.filter((p: any) => p.status === 'disponible').length,
     proceso: allProcedures.filter((p: any) => p.status === 'proceso').length,
     finalizado: allProcedures.filter((p: any) => p.status === 'finalizado').length,
+    cancelado: allProcedures.filter((p: any) => p.status === 'cancelado').length,
   }
 
   // Verificar si el alumno tiene al menos un procedimiento activo con este paciente
@@ -129,6 +130,8 @@ export default function PatientDetailScreen({ navigation }: any) {
         return colors.warning
       case 'disponible':
         return colors.brandTurquoise
+      case 'cancelado':
+        return '#9CA3AF'
       default:
         return colors.textMuted
     }
@@ -142,6 +145,8 @@ export default function PatientDetailScreen({ navigation }: any) {
         return 'En Proceso'
       case 'disponible':
         return 'Disponible'
+      case 'cancelado':
+        return 'Cancelado'
       default:
         return status
     }
@@ -319,6 +324,21 @@ export default function PatientDetailScreen({ navigation }: any) {
                 Finalizados ({procedureCounts.finalizado})
               </AppText>
             </TouchableOpacity>
+
+            {procedureCounts.cancelado > 0 && (
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'cancelado' && styles.tabActive, activeTab === 'cancelado' && { backgroundColor: '#9CA3AF' }]}
+                onPress={() => setActiveTab('cancelado')}
+              >
+                <AppText
+                  color={activeTab === 'cancelado' ? 'white' : 'textMuted'}
+                  weight="semibold"
+                  style={styles.tabText}
+                >
+                  Cancelados ({procedureCounts.cancelado})
+                </AppText>
+              </TouchableOpacity>
+            )}
           </View>
 
           {filteredProcedures.length > 0 ? (

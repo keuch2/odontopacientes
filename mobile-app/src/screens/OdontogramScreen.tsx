@@ -19,7 +19,7 @@ interface PatientProcedure {
   }
   tooth_fdi: string | null
   tooth_surface: string | null
-  status: 'disponible' | 'proceso' | 'finalizado' | 'contraindicado' | 'ausente'
+  status: 'disponible' | 'proceso' | 'finalizado' | 'contraindicado' | 'ausente' | 'cancelado'
   notes: string | null
   priority: string
 }
@@ -56,6 +56,7 @@ const PROCEDURE_STATUS_COLORS = {
   finalizado: '#D1FAE5',
   contraindicado: '#FEE2E2',
   ausente: '#D1D5DB',
+  cancelado: '#E5E7EB',
 }
 
 const PROCEDURE_STATUS_BORDER_COLORS = {
@@ -64,6 +65,7 @@ const PROCEDURE_STATUS_BORDER_COLORS = {
   finalizado: '#10B981',
   contraindicado: '#EF4444',
   ausente: '#6B7280',
+  cancelado: '#9CA3AF',
 }
 
 const PROCEDURE_STATUS_LABELS = {
@@ -72,6 +74,7 @@ const PROCEDURE_STATUS_LABELS = {
   finalizado: 'Finalizado',
   contraindicado: 'Contraindicado',
   ausente: 'Ausente',
+  cancelado: 'Cancelado',
 }
 
 export default function OdontogramScreen() {
@@ -186,9 +189,22 @@ export default function OdontogramScreen() {
     setSelectedTeeth(new Set())
   }
 
+  const hasActiveProsthesis = () => {
+    const prosthesisKeywords = ['prótesis', 'protesis', 'completa superior', 'completa inferior', 'completo']
+    return procedures.some(p => {
+      if (p.status === 'finalizado' || p.status === 'cancelado') return false
+      const treatmentName = (p.treatment?.name || '').toLowerCase()
+      return prosthesisKeywords.some(kw => treatmentName.includes(kw))
+    })
+  }
+
   const handleAddProcedure = () => {
     if (selectedTeeth.size === 0) {
       Alert.alert('Seleccionar dientes', 'Debes seleccionar al menos un diente en el odontograma antes de agregar un procedimiento.')
+      return
+    }
+    if (hasActiveProsthesis()) {
+      Alert.alert('Prótesis activa', 'Existe una prótesis activa para este paciente. Debes finalizar o cancelar la prótesis antes de agregar nuevos procedimientos.')
       return
     }
     setModalVisible(true)
@@ -375,24 +391,20 @@ export default function OdontogramScreen() {
           </ScrollView>
         </Surface>
 
-        {/* Selección rápida para prótesis */}
+        {/* Prótesis selector */}
         <Surface style={styles.quickSelectContainer}>
-          <Text style={styles.quickSelectTitle}>Selección de dientes {selectedTeeth.size > 0 ? `(${selectedTeeth.size})` : ''}</Text>
+          <Text style={styles.quickSelectTitle}>Prótesis</Text>
           <View style={styles.quickSelectRow}>
-            <Button mode="outlined" onPress={selectAllUpper} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel}>Superiores</Button>
-            <Button mode="outlined" onPress={selectAllLower} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel}>Inferiores</Button>
-            <Button mode="outlined" onPress={selectAll} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel}>Todos</Button>
-            {selectedTeeth.size > 0 && (
-              <Button mode="text" onPress={clearSelection} compact labelStyle={styles.quickSelectClearLabel}>Limpiar</Button>
-            )}
+            <Button mode="outlined" onPress={selectAllUpper} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel}>Completo Superior</Button>
+            <Button mode="outlined" onPress={selectAllLower} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel}>Completo Inferior</Button>
+            <Button mode="outlined" onPress={selectAll} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel}>Completo Total</Button>
           </View>
           {selectedTeeth.size > 0 && (
-            <View style={styles.selectedTeethRow}>
-              {Array.from(selectedTeeth).sort((a, b) => Number(a) - Number(b)).map(t => (
-                <View key={t} style={styles.selectedToothChip}>
-                  <Text style={styles.selectedToothChipText}>{t}</Text>
-                </View>
-              ))}
+            <View style={styles.selectedTeethInfo}>
+              <Text style={styles.selectedTeethInfoText}>
+                {selectedTeeth.size} dientes seleccionados
+              </Text>
+              <Button mode="text" onPress={clearSelection} compact labelStyle={styles.quickSelectClearLabel}>Limpiar</Button>
             </View>
           )}
         </Surface>
@@ -817,5 +829,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600' as const,
     color: '#1D4ED8',
+  },
+  selectedTeethInfo: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  selectedTeethInfoText: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+    color: '#374151',
   },
 })

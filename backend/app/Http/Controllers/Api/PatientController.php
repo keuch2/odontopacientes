@@ -59,9 +59,14 @@ class PatientController extends Controller
                         'university' => $patient->faculty->university->name ?? null,
                     ] : null,
                     'has_valid_consent' => $patient->hasValidConsent(),
-                    'procedures_available' => $patient->availableProcedures()->count(),
-                    'procedures_in_progress' => $patient->inProgressProcedures()->count(),
-                    'procedures_completed' => $patient->completedProcedures()->count(),
+                    'procedures_available' => $patient->patientProcedures()->where('status', 'disponible')->count(),
+                    'procedures_in_progress' => $patient->patientProcedures()->where('status', 'proceso')->count(),
+                    'procedures_completed' => $patient->patientProcedures()->where('status', 'finalizado')->count(),
+                    'procedures_count' => [
+                        'disponible' => $patient->patientProcedures()->where('status', 'disponible')->count(),
+                        'proceso' => $patient->patientProcedures()->where('status', 'proceso')->count(),
+                        'finalizado' => $patient->patientProcedures()->where('status', 'finalizado')->count(),
+                    ],
                     'university_registered_at' => $patient->university_registered_at,
                     'created_at' => $patient->created_at,
                 ];

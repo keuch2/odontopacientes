@@ -6,8 +6,7 @@ export interface RegisterData {
   email: string
   phone: string
   birthDate: string
-  course: string
-  faculty: string
+  university_id: number | null
   password: string
   confirmPassword: string
   // Step 2
@@ -26,8 +25,7 @@ const initialData: RegisterData = {
   email: '',
   phone: '',
   birthDate: '',
-  course: '',
-  faculty: '',
+  university_id: null,
   password: '',
   confirmPassword: '',
   profileImage: null,

@@ -328,6 +328,36 @@ export default function ProcedureViewScreen() {
     )
   }
 
+  const isCreator = () => {
+    return user?.id != null && procedure?.created_by?.id === user.id
+  }
+
+  const handleCancel = async () => {
+    Alert.alert(
+      'Cancelar Procedimiento',
+      '¿Estás seguro que deseas cancelar este procedimiento? Esta acción no se puede deshacer.',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Sí, Cancelar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setActionLoading(true)
+              await api.procedures.cancel(procedureId)
+              Alert.alert('Éxito', 'Procedimiento cancelado')
+              fetchProcedureDetails()
+            } catch (error: any) {
+              Alert.alert('Error', error.response?.data?.message || 'No se pudo cancelar el procedimiento')
+            } finally {
+              setActionLoading(false)
+            }
+          }
+        }
+      ]
+    )
+  }
+
   const handleAbandon = async () => {
     Alert.prompt(
       'Abandonar Procedimiento',
@@ -437,6 +467,26 @@ export default function ProcedureViewScreen() {
           </View>
         )}
 
+        {/* Cancel button - only visible to creator, not for finalized/cancelled */}
+        {isCreator() && procedure.status !== 'finalizado' && procedure.status !== 'cancelado' && (
+          <View style={styles.actionButtonsContainer}>
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.cancelButton]}
+              onPress={handleCancel}
+              disabled={actionLoading}
+            >
+              {actionLoading ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <>
+                  <Ionicons name="close-circle-outline" size={20} color={colors.white} />
+                  <AppText color="white" weight="semibold" style={styles.actionButtonText}>CANCELAR PROCEDIMIENTO</AppText>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Estado label */}
         <View style={styles.statusBadgeContainer}>
           <View style={[
@@ -445,9 +495,10 @@ export default function ProcedureViewScreen() {
             procedure.status === 'proceso' && styles.statusInProgress,
             procedure.status === 'finalizado' && styles.statusCompleted,
             procedure.status === 'contraindicado' && styles.statusContraindicado,
+            procedure.status === 'cancelado' && styles.statusCancelled,
           ]}>
             <Ionicons
-              name={procedure.status === 'disponible' ? 'ellipse' : procedure.status === 'proceso' ? 'time' : procedure.status === 'finalizado' ? 'checkmark-circle' : 'close-circle'}
+              name={procedure.status === 'disponible' ? 'ellipse' : procedure.status === 'proceso' ? 'time' : procedure.status === 'finalizado' ? 'checkmark-circle' : procedure.status === 'cancelado' ? 'ban' : 'close-circle'}
               size={14}
               color="white"
               style={{ marginRight: 6 }}
@@ -457,6 +508,7 @@ export default function ProcedureViewScreen() {
               {procedure.status === 'proceso' && 'En Proceso'}
               {procedure.status === 'finalizado' && 'Finalizado'}
               {procedure.status === 'contraindicado' && 'Contraindicado'}
+              {procedure.status === 'cancelado' && 'Cancelado'}
             </AppText>
           </View>
         </View>
@@ -1068,6 +1120,12 @@ const styles = StyleSheet.create({
   },
   abandonButton: {
     backgroundColor: colors.error,
+  },
+  cancelButton: {
+    backgroundColor: '#DC2626',
+  },
+  statusCancelled: {
+    backgroundColor: '#6B7280',
   },
   actionButtonText: {
     marginLeft: spacing.xs,

@@ -80,7 +80,7 @@ class PatientProcedureController extends Controller
             'estimated_price' => 'nullable|numeric|min:0',
             'price' => 'nullable|numeric|min:0',
             'priority' => 'nullable|in:baja,media,alta',
-            'status' => 'nullable|in:disponible,proceso,finalizado,contraindicado,ausente',
+            'status' => 'nullable|in:disponible,proceso,finalizado,contraindicado,ausente,cancelado',
             'sessions_total' => 'nullable|integer|min:1',
             'auto_assign' => 'nullable|boolean',
             'is_repair' => 'nullable|boolean',
@@ -433,6 +433,47 @@ class PatientProcedureController extends Controller
                     'status' => $patientProcedure->status,
                 ],
             ]
+        ]);
+    }
+
+    /**
+     * Cancelar procedimiento (solo el creador puede cancelarlo)
+     */
+    public function cancel(Request $request, PatientProcedure $patientProcedure)
+    {
+        $user = $request->attributes->get('demo_user');
+        $userId = is_array($user) ? ($user['id'] ?? null) : ($user->id ?? null);
+
+        if (!$userId || $patientProcedure->created_by !== $userId) {
+            return response()->json([
+                'message' => 'Solo el usuario que creó este procedimiento puede cancelarlo'
+            ], 403);
+        }
+
+        if ($patientProcedure->status === 'finalizado') {
+            return response()->json([
+                'message' => 'No se puede cancelar un procedimiento finalizado'
+            ], 422);
+        }
+
+        // If there's an active assignment, abandon it first
+        if ($patientProcedure->activeAssignment) {
+            $patientProcedure->activeAssignment->update([
+                'status' => 'abandonada',
+                'ended_at' => now(),
+            ]);
+        }
+
+        $oldStatus = $patientProcedure->status;
+        $patientProcedure->update(['status' => 'cancelado']);
+
+        \App\Models\Audit::log('cancelled', 'PatientProcedure', $patientProcedure->id, [
+            'old_status' => $oldStatus,
+            'cancelled_by' => $userId,
+        ]);
+
+        return response()->json([
+            'message' => 'Procedimiento cancelado exitosamente'
         ]);
     }
 

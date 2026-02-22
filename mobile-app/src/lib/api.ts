@@ -234,6 +234,9 @@ class ApiClient {
 
     update: (procedureId: number, data: { treatment_id?: number, chair_id?: number, notes?: string, tooth_description?: string, priority?: string }): Promise<AxiosResponse<ApiResponse>> =>
       this.client.put(`/patient-procedures/${procedureId}`, data),
+
+    cancel: (procedureId: number): Promise<AxiosResponse<ApiResponse>> =>
+      this.client.post(`/patient-procedures/${procedureId}/cancel`),
   }
 
   // Métodos para estudiantes

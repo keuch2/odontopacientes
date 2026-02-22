@@ -250,6 +250,7 @@ Route::middleware('demo.auth')->group(function () {
     Route::put('/patient-procedures/{patientProcedure}', [\App\Http\Controllers\Api\PatientProcedureController::class, 'update']);
     Route::delete('/patient-procedures/{patientProcedure}', [\App\Http\Controllers\Api\PatientProcedureController::class, 'destroy']);
     Route::post('/patient-procedures/{patientProcedure}/assign', [\App\Http\Controllers\Api\PatientProcedureController::class, 'assign']);
+    Route::post('/patient-procedures/{patientProcedure}/cancel', [\App\Http\Controllers\Api\PatientProcedureController::class, 'cancel']);
     
     // Odontograms
     Route::get('/patients/{patient}/odontograms', [\App\Http\Controllers\Api\OdontogramController::class, 'index']);

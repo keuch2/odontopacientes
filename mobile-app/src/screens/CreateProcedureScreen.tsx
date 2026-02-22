@@ -79,6 +79,7 @@ export default function CreateProcedureScreen() {
 
     if (!chairId) newErrors.chairId = 'Debe seleccionar una cátedra'
     if (!treatmentId) newErrors.treatmentId = 'Debe seleccionar un tratamiento'
+    if (!toothFdi.trim()) newErrors.toothFdi = 'Debe indicar el número de diente (FDI)'
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -92,13 +93,12 @@ export default function CreateProcedureScreen() {
 
     setLoading(true)
     try {
-      await api.procedures.create({
-        patient_id: patientId,
+      await api.procedures.createForPatient(patientId, {
         treatment_id: treatmentId!,
         chair_id: chairId!,
-        tooth_fdi: toothFdi.trim() || undefined,
-        tooth_surface: toothSurface || undefined,
-        description: description.trim() || undefined,
+        tooth_fdi: toothFdi.trim(),
+        tooth_surface: toothSurface || null,
+        notes: description.trim() || null,
       })
 
       Alert.alert(
@@ -203,14 +203,17 @@ export default function CreateProcedureScreen() {
           </View>
 
           <TextInput
-            label="Diente FDI (ej: 36)"
+            label="Diente FDI *"
             value={toothFdi}
             onChangeText={setToothFdi}
             mode="outlined"
             style={styles.input}
             keyboardType="numeric"
             maxLength={2}
+            placeholder="Ej: 36"
+            error={!!errors.toothFdi}
           />
+          {errors.toothFdi && <HelperText type="error">{errors.toothFdi}</HelperText>}
 
           <View style={styles.pickerContainer}>
             <HelperText type="info" style={styles.label}>Superficie (opcional)</HelperText>

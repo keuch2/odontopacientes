@@ -24,6 +24,9 @@ class CustomCors
      * @var array<string>
      */
     private array $allowedOrigins = [
+        'https://codexpy.com',
+        'https://codexpy.com/odontopacientes/web-admin',
+        'http://codexpy.com',
         'http://localhost/odontopacientes/web-admin',
         'http://localhost:3000',
         'http://localhost:5173',

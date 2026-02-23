@@ -25,6 +25,15 @@ class PatientController extends Controller
                 return $query->searchByName($search);
             })
             ->when($request->chair_id, function ($query, $chairId) {
+                $pediatriaChairId = Chair::where('key', 'pediatria')->value('id');
+                if ((int) $chairId === $pediatriaChairId) {
+                    return $query->where(function ($q) use ($chairId) {
+                        $q->where('is_pediatric', true)
+                          ->orWhereHas('patientProcedures', function ($sq) use ($chairId) {
+                              $sq->where('chair_id', $chairId);
+                          });
+                    });
+                }
                 return $query->whereHas('patientProcedures', function ($q) use ($chairId) {
                     $q->where('chair_id', $chairId);
                 });
@@ -58,6 +67,7 @@ class PatientController extends Controller
                         'name' => $patient->faculty->name,
                         'university' => $patient->faculty->university->name ?? null,
                     ] : null,
+                    'is_pediatric' => (bool) $patient->is_pediatric,
                     'has_valid_consent' => $patient->hasValidConsent(),
                     'procedures_available' => $patient->patientProcedures()->where('status', 'disponible')->count(),
                     'procedures_in_progress' => $patient->patientProcedures()->where('status', 'proceso')->count(),

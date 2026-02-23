@@ -14,6 +14,7 @@ interface PatientCardProps {
     disponibles: number
     enProceso: number
     finalizados: number
+    isPediatric?: boolean
   }
   onPress?: () => void
 }
@@ -22,9 +23,16 @@ export function PatientCard({ patient, onPress }: PatientCardProps) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
       <AppCard style={styles.patientCard} padding="lg">
-        <AppText variant="h3" color="white" weight="bold" style={styles.patientName}>
-          {patient.name}
-        </AppText>
+        <View style={styles.nameRow}>
+          <AppText variant="h3" color="white" weight="bold" style={styles.patientName}>
+            {patient.name}
+          </AppText>
+          {patient.isPediatric && (
+            <View style={styles.pediatricBadge}>
+              <AppText color="white" weight="semibold" style={styles.pediatricText}>Pediátrico</AppText>
+            </View>
+          )}
+        </View>
         <AppText color="white" style={styles.patientInfo}>
           {patient.age} años • {patient.city} • {patient.university}
         </AppText>
@@ -55,8 +63,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandTurquoise,
     marginBottom: spacing.md,
   },
-  patientName: {
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: spacing.xs,
+    gap: spacing.sm,
+  },
+  patientName: {
+    flex: 1,
+  },
+  pediatricBadge: {
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  pediatricText: {
+    fontSize: 10,
   },
   patientInfo: {
     marginBottom: spacing.md,

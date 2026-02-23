@@ -22,6 +22,7 @@ interface PatientData {
   enProceso: number
   finalizados: number
   treatments: string[]
+  isPediatric: boolean
 }
 
 export default function ChairPatientsScreen({ route, navigation }: any) {
@@ -61,10 +62,11 @@ export default function ChairPatientsScreen({ route, navigation }: any) {
       age: patient.age || 0,
       city: patient.city || '',
       university: patient.faculty?.name || '',
-      disponibles: patient.procedures_available || 0,
-      enProceso: patient.procedures_in_progress || 0,
-      finalizados: patient.procedures_completed || 0,
+      disponibles: patient.procedures_available || patient.procedures_count?.disponible || 0,
+      enProceso: patient.procedures_in_progress || patient.procedures_count?.proceso || 0,
+      finalizados: patient.procedures_completed || patient.procedures_count?.finalizado || 0,
       treatments: patient.treatments?.map((t: any) => t.name) || [],
+      isPediatric: !!patient.is_pediatric,
     }))
   }, [patientsData])
 
@@ -161,9 +163,16 @@ export default function ChairPatientsScreen({ route, navigation }: any) {
             onPress={() => navigation.navigate('PatientDetail', { patientId: patient.id })}
           >
             <AppCard style={styles.patientCard} padding="lg">
-              <AppText variant="h3" color="white" weight="bold" style={styles.patientName}>
-                {patient.name}
-              </AppText>
+              <View style={styles.nameRow}>
+                <AppText variant="h3" color="white" weight="bold" style={styles.patientNameFlex}>
+                  {patient.name}
+                </AppText>
+                {patient.isPediatric && (
+                  <View style={styles.pediatricBadge}>
+                    <AppText color="white" weight="semibold" style={styles.pediatricText}>Pediátrico</AppText>
+                  </View>
+                )}
+              </View>
               <AppText color="white" style={styles.patientInfo}>
                 {patient.age} años • {patient.city} • {patient.university}
               </AppText>
@@ -268,8 +277,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandTurquoise,
     marginBottom: spacing.md,
   },
-  patientName: {
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: spacing.xs,
+    gap: spacing.sm,
+  },
+  patientName: {
+    flex: 1,
+  },
+  patientNameFlex: {
+    flex: 1,
+  },
+  pediatricBadge: {
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  pediatricText: {
+    fontSize: 10,
   },
   patientInfo: {
     marginBottom: spacing.md,

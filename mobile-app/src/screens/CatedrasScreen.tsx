@@ -118,6 +118,7 @@ export default function CatedrasScreen({ navigation }: any) {
     disponibles: patient.procedures_count?.disponible || 0,
     enProceso: patient.procedures_count?.proceso || 0,
     finalizados: patient.procedures_count?.finalizado || 0,
+    isPediatric: !!patient.is_pediatric,
   }))
 
   // Mostrar pacientes si hay texto de búsqueda, sino mostrar cátedras

@@ -234,6 +234,12 @@ Route::middleware('demo.auth')->group(function () {
     Route::put('/treatments/{id}', [\App\Http\Controllers\Api\TreatmentController::class, 'update']);
     Route::delete('/treatments/{id}', [\App\Http\Controllers\Api\TreatmentController::class, 'destroy']);
 
+    // Treatment Subclasses CRUD
+    Route::get('/treatments/{treatmentId}/subclasses', [\App\Http\Controllers\Api\TreatmentController::class, 'subclassIndex']);
+    Route::post('/treatments/{treatmentId}/subclasses', [\App\Http\Controllers\Api\TreatmentController::class, 'subclassStore']);
+    Route::put('/treatments/{treatmentId}/subclasses/{subclassId}', [\App\Http\Controllers\Api\TreatmentController::class, 'subclassUpdate']);
+    Route::delete('/treatments/{treatmentId}/subclasses/{subclassId}', [\App\Http\Controllers\Api\TreatmentController::class, 'subclassDestroy']);
+
     // Universities CRUD (admin)
     Route::get('/universities/{university}', [\App\Http\Controllers\Api\UniversityController::class, 'show']);
     Route::post('/universities', [\App\Http\Controllers\Api\UniversityController::class, 'store']);

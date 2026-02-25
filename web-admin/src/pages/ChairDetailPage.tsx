@@ -13,6 +13,7 @@ import {
   X,
   ArrowUpFromLine,
   ArrowDownFromLine,
+  Tag,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 
@@ -42,6 +43,8 @@ export default function ChairDetailPage() {
   const [editingTreatment, setEditingTreatment] = useState<any>(null)
   const [form, setForm] = useState<TreatmentForm>(emptyTreatmentForm)
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
+  const [subclassInput, setSubclassInput] = useState<Record<number, string>>({})
+  const [editingSubclass, setEditingSubclass] = useState<{ treatmentId: number; subclassId: number; name: string } | null>(null)
 
   const { data: chairData, isLoading: chairLoading } = useQuery({
     queryKey: ['chair', id],
@@ -72,6 +75,32 @@ export default function ChairDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chair', id] })
       setDeleteConfirm(null)
+    },
+  })
+
+  const createSubclassMutation = useMutation({
+    mutationFn: ({ treatmentId, name }: { treatmentId: number; name: string }) =>
+      api.treatmentSubclasses.create(treatmentId, { name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chair', id] })
+      setSubclassInput({})
+    },
+  })
+
+  const updateSubclassMutation = useMutation({
+    mutationFn: ({ treatmentId, subclassId, name }: { treatmentId: number; subclassId: number; name: string }) =>
+      api.treatmentSubclasses.update(treatmentId, subclassId, { name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chair', id] })
+      setEditingSubclass(null)
+    },
+  })
+
+  const deleteSubclassMutation = useMutation({
+    mutationFn: ({ treatmentId, subclassId }: { treatmentId: number; subclassId: number }) =>
+      api.treatmentSubclasses.delete(treatmentId, subclassId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chair', id] })
     },
   })
 
@@ -276,6 +305,94 @@ export default function ChairDetailPage() {
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
+                  </div>
+
+                  {/* Subclasses */}
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-gray-500 flex items-center gap-1">
+                        <Tag className="h-3 w-3" /> Sub-clases ({treatment.subclasses?.length || 0}/5)
+                      </p>
+                    </div>
+                    {treatment.subclasses && treatment.subclasses.length > 0 && (
+                      <div className="space-y-1 mb-2">
+                        {treatment.subclasses.map((sc: any) => (
+                          <div key={sc.id} className="flex items-center justify-between bg-gray-50 rounded px-2 py-1 text-sm">
+                            {editingSubclass?.subclassId === sc.id ? (
+                              <form
+                                className="flex items-center gap-1 flex-1"
+                                onSubmit={(e) => {
+                                  e.preventDefault()
+                                  if (editingSubclass.name.trim()) {
+                                    updateSubclassMutation.mutate({
+                                      treatmentId: treatment.id,
+                                      subclassId: sc.id,
+                                      name: editingSubclass.name.trim(),
+                                    })
+                                  }
+                                }}
+                              >
+                                <input
+                                  type="text"
+                                  value={editingSubclass.name}
+                                  onChange={(e) => setEditingSubclass({ ...editingSubclass, name: e.target.value })}
+                                  className="flex-1 border border-gray-300 rounded px-2 py-0.5 text-xs focus:ring-1 focus:ring-blue-500"
+                                  autoFocus
+                                />
+                                <button type="submit" className="text-green-600 hover:text-green-700 text-xs font-medium">OK</button>
+                                <button type="button" onClick={() => setEditingSubclass(null)} className="text-gray-400 hover:text-gray-600 text-xs">Cancelar</button>
+                              </form>
+                            ) : (
+                              <>
+                                <span className="text-gray-700">{sc.name}</span>
+                                <div className="flex gap-1">
+                                  <button
+                                    onClick={() => setEditingSubclass({ treatmentId: treatment.id, subclassId: sc.id, name: sc.name })}
+                                    className="text-gray-400 hover:text-blue-600"
+                                  >
+                                    <Edit2 className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => deleteSubclassMutation.mutate({ treatmentId: treatment.id, subclassId: sc.id })}
+                                    className="text-gray-400 hover:text-red-600"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {(!treatment.subclasses || treatment.subclasses.length < 5) && (
+                      <form
+                        className="flex items-center gap-1"
+                        onSubmit={(e) => {
+                          e.preventDefault()
+                          const name = (subclassInput[treatment.id] || '').trim()
+                          if (name) {
+                            createSubclassMutation.mutate({ treatmentId: treatment.id, name })
+                          }
+                        }}
+                      >
+                        <input
+                          type="text"
+                          value={subclassInput[treatment.id] || ''}
+                          onChange={(e) => setSubclassInput({ ...subclassInput, [treatment.id]: e.target.value })}
+                          className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500"
+                          placeholder="Nueva sub-clase..."
+                          maxLength={255}
+                        />
+                        <button
+                          type="submit"
+                          className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-2 py-1 rounded font-medium"
+                          disabled={createSubclassMutation.isPending}
+                        >
+                          {createSubclassMutation.isPending ? '...' : '+ Agregar'}
+                        </button>
+                      </form>
+                    )}
                   </div>
                 </div>
               ))}

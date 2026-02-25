@@ -1,12 +1,11 @@
 <IfModule mod_headers.c>
-    # Handle CORS for preflight OPTIONS requests
-    SetEnvIf Request_Method OPTIONS IS_OPTIONS=1
-    SetEnvIf Origin "^http(s)?://(localhost:8081|localhost:3000|localhost:5173|127\.0\.0\.1:8081)$" CORS_ALLOW_ORIGIN=$0
-    Header always set Access-Control-Allow-Origin "%{CORS_ALLOW_ORIGIN}e" env=IS_OPTIONS
-    Header always set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" env=IS_OPTIONS
-    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept, Origin" env=IS_OPTIONS
-    Header always set Access-Control-Allow-Credentials "true" env=IS_OPTIONS
-    Header always set Access-Control-Max-Age "86400" env=IS_OPTIONS
+    # Handle CORS - match allowed origins (including production codexpy.com)
+    SetEnvIf Origin "^https?://(codexpy\.com|localhost(:\d+)?|127\.0\.0\.1(:\d+)?)$" CORS_ALLOW_ORIGIN=$0
+    Header always set Access-Control-Allow-Origin "%{CORS_ALLOW_ORIGIN}e" env=CORS_ALLOW_ORIGIN
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" env=CORS_ALLOW_ORIGIN
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept, Origin" env=CORS_ALLOW_ORIGIN
+    Header always set Access-Control-Allow-Credentials "true" env=CORS_ALLOW_ORIGIN
+    Header always set Access-Control-Max-Age "86400" env=CORS_ALLOW_ORIGIN
 </IfModule>
 
 <IfModule mod_rewrite.c>

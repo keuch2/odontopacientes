@@ -46,6 +46,14 @@ class Treatment extends Model
     }
 
     /**
+     * Sub-clases de este tratamiento
+     */
+    public function subclasses(): HasMany
+    {
+        return $this->hasMany(TreatmentSubclass::class)->orderBy('sort_order')->orderBy('name');
+    }
+
+    /**
      * Procedimientos de pacientes con este tratamiento
      */
     public function patientProcedures(): HasMany

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Treatment;
+use App\Models\TreatmentSubclass;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -11,7 +12,9 @@ class TreatmentController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Treatment::with('chair');
+        $query = Treatment::with(['chair', 'subclasses' => function ($q) {
+            $q->where('active', true)->orderBy('sort_order')->orderBy('name');
+        }]);
 
         if ($request->has('chair_id')) {
             $query->where('chair_id', $request->chair_id);
@@ -27,7 +30,7 @@ class TreatmentController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $treatment = Treatment::with('chair')->findOrFail($id);
+        $treatment = Treatment::with(['chair', 'subclasses'])->findOrFail($id);
 
         return response()->json([
             'success' => true,
@@ -107,6 +110,99 @@ class TreatmentController extends Controller
         return response()->json(['message' => 'Tratamiento eliminado correctamente']);
     }
 
+    // ---- Subclass CRUD ----
+
+    public function subclassIndex(int $treatmentId): JsonResponse
+    {
+        $treatment = Treatment::findOrFail($treatmentId);
+        $subclasses = $treatment->subclasses()->orderBy('sort_order')->orderBy('name')->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $subclasses->map(fn ($s) => [
+                'id' => $s->id,
+                'treatment_id' => $s->treatment_id,
+                'name' => $s->name,
+                'sort_order' => $s->sort_order,
+                'active' => (bool) $s->active,
+            ]),
+        ]);
+    }
+
+    public function subclassStore(Request $request, int $treatmentId): JsonResponse
+    {
+        $treatment = Treatment::findOrFail($treatmentId);
+
+        if ($treatment->subclasses()->count() >= 5) {
+            return response()->json([
+                'message' => 'Un tratamiento puede tener un maximo de 5 sub-clases',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'sort_order' => 'nullable|integer',
+            'active' => 'nullable|boolean',
+        ]);
+
+        $subclass = $treatment->subclasses()->create(array_merge([
+            'sort_order' => 0,
+            'active' => true,
+        ], $validated));
+
+        return response()->json([
+            'message' => 'Sub-clase creada correctamente',
+            'data' => [
+                'id' => $subclass->id,
+                'treatment_id' => $subclass->treatment_id,
+                'name' => $subclass->name,
+                'sort_order' => $subclass->sort_order,
+                'active' => (bool) $subclass->active,
+            ],
+        ], 201);
+    }
+
+    public function subclassUpdate(Request $request, int $treatmentId, int $subclassId): JsonResponse
+    {
+        Treatment::findOrFail($treatmentId);
+        $subclass = TreatmentSubclass::where('treatment_id', $treatmentId)->findOrFail($subclassId);
+
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'sort_order' => 'nullable|integer',
+            'active' => 'nullable|boolean',
+        ]);
+
+        $subclass->update($validated);
+
+        return response()->json([
+            'message' => 'Sub-clase actualizada correctamente',
+            'data' => [
+                'id' => $subclass->id,
+                'treatment_id' => $subclass->treatment_id,
+                'name' => $subclass->name,
+                'sort_order' => $subclass->sort_order,
+                'active' => (bool) $subclass->active,
+            ],
+        ]);
+    }
+
+    public function subclassDestroy(int $treatmentId, int $subclassId): JsonResponse
+    {
+        Treatment::findOrFail($treatmentId);
+        $subclass = TreatmentSubclass::where('treatment_id', $treatmentId)->findOrFail($subclassId);
+
+        if ($subclass->patientProcedures()->count() > 0) {
+            return response()->json([
+                'message' => 'No se puede eliminar una sub-clase con procedimientos asociados',
+            ], 422);
+        }
+
+        $subclass->delete();
+
+        return response()->json(['message' => 'Sub-clase eliminada correctamente']);
+    }
+
     private function formatTreatment(Treatment $treatment): array
     {
         return [
@@ -122,6 +218,14 @@ class TreatmentController extends Controller
             'base_price' => $treatment->base_price,
             'sort_order' => $treatment->sort_order,
             'active' => (bool) $treatment->active,
+            'subclasses' => $treatment->relationLoaded('subclasses')
+                ? $treatment->subclasses->map(fn ($s) => [
+                    'id' => $s->id,
+                    'name' => $s->name,
+                    'sort_order' => $s->sort_order,
+                    'active' => (bool) $s->active,
+                ])->values()->toArray()
+                : [],
             'chair' => $treatment->chair ? [
                 'id' => $treatment->chair->id,
                 'name' => $treatment->chair->name,

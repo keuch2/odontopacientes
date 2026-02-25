@@ -15,6 +15,7 @@ class PatientProcedure extends Model
     protected $fillable = [
         'patient_id',
         'treatment_id',
+        'treatment_subclass_id',
         'chair_id',
         'tooth_fdi',
         'tooth_surface',
@@ -49,6 +50,14 @@ class PatientProcedure extends Model
     public function treatment(): BelongsTo
     {
         return $this->belongsTo(Treatment::class);
+    }
+
+    /**
+     * Sub-clase del tratamiento
+     */
+    public function treatmentSubclass(): BelongsTo
+    {
+        return $this->belongsTo(TreatmentSubclass::class);
     }
 
     /**

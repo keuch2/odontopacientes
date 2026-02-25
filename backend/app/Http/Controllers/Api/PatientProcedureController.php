@@ -72,6 +72,7 @@ class PatientProcedureController extends Controller
 
         $validator = Validator::make($request->all(), [
             'treatment_id' => $isAusente ? 'nullable|exists:treatments,id' : 'required|exists:treatments,id',
+            'treatment_subclass_id' => 'nullable|exists:treatment_subclasses,id',
             'chair_id' => 'nullable|exists:chairs,id',
             'tooth_description' => 'nullable|string|max:255',
             'tooth_fdi' => 'required|string|max:255',
@@ -121,6 +122,7 @@ class PatientProcedureController extends Controller
         $procedure = PatientProcedure::create([
             'patient_id' => $patient->id,
             'treatment_id' => $treatment->id,
+            'treatment_subclass_id' => $request->treatment_subclass_id,
             'chair_id' => $chairId,
             'tooth_fdi' => $request->tooth_fdi,
             'tooth_surface' => $request->tooth_surface,

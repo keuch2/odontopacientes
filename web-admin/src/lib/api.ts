@@ -197,6 +197,21 @@ export const api = {
       apiClient.delete<ApiResponse>(`/treatments/${id}`),
   },
 
+  // Sub-clases de tratamientos
+  treatmentSubclasses: {
+    getAll: (treatmentId: number) =>
+      apiClient.get<ApiResponse>(`/treatments/${treatmentId}/subclasses`),
+
+    create: (treatmentId: number, data: any) =>
+      apiClient.post<ApiResponse>(`/treatments/${treatmentId}/subclasses`, data),
+
+    update: (treatmentId: number, subclassId: number, data: any) =>
+      apiClient.put<ApiResponse>(`/treatments/${treatmentId}/subclasses/${subclassId}`, data),
+
+    delete: (treatmentId: number, subclassId: number) =>
+      apiClient.delete<ApiResponse>(`/treatments/${treatmentId}/subclasses/${subclassId}`),
+  },
+
   // Universidades
   universities: {
     getAll: () =>

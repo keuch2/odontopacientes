@@ -21,10 +21,16 @@ interface Chair {
   name: string;
 }
 
+interface Subclass {
+  id: number;
+  name: string;
+}
+
 interface Treatment {
   id: number;
   name: string;
   chair_id: number;
+  subclasses?: Subclass[];
 }
 
 interface AddProcedureModalProps {
@@ -61,10 +67,12 @@ export default function AddProcedureModal({
   // Menu visibility
   const [chairMenuVisible, setChairMenuVisible] = useState(false);
   const [treatmentMenuVisible, setTreatmentMenuVisible] = useState(false);
+  const [subclassMenuVisible, setSubclassMenuVisible] = useState(false);
   
   // Form fields
   const [selectedChairId, setSelectedChairId] = useState<number | null>(null);
   const [selectedTreatmentId, setSelectedTreatmentId] = useState<number | null>(null);
+  const [selectedSubclassId, setSelectedSubclassId] = useState<number | null>(null);
   const [toothSurface, setToothSurface] = useState('');
   const [status, setStatus] = useState('disponible');
   const [sessionsTotal, setSessionsTotal] = useState('1');
@@ -85,15 +93,22 @@ export default function AddProcedureModal({
     if (selectedChairId) {
       const filtered = treatments.filter(t => t.chair_id === selectedChairId);
       setFilteredTreatments(filtered);
-      // Reset treatment if not in filtered list
       if (selectedTreatmentId && !filtered.find(t => t.id === selectedTreatmentId)) {
         setSelectedTreatmentId(null);
+        setSelectedSubclassId(null);
       }
     } else {
       setFilteredTreatments([]);
       setSelectedTreatmentId(null);
+      setSelectedSubclassId(null);
     }
   }, [selectedChairId, treatments]);
+
+  // Get subclasses for selected treatment
+  const selectedTreatment = selectedTreatmentId
+    ? filteredTreatments.find(t => t.id === selectedTreatmentId)
+    : null;
+  const availableSubclasses = selectedTreatment?.subclasses || [];
 
   const loadData = async () => {
     setLoadingData(true);
@@ -154,6 +169,7 @@ export default function AddProcedureModal({
       for (const toothFdi of selectedTeeth) {
         await api.procedures.createForPatient(patientId, {
           treatment_id: selectedTreatmentId,
+          treatment_subclass_id: selectedSubclassId || null,
           tooth_fdi: toothFdi,
           tooth_surface: toothSurface || null,
           is_repair: isRepair,
@@ -181,6 +197,7 @@ export default function AddProcedureModal({
   const resetForm = () => {
     setSelectedChairId(null);
     setSelectedTreatmentId(null);
+    setSelectedSubclassId(null);
     setToothSurface('');
     setStatus('disponible');
     setSessionsTotal('1');
@@ -302,6 +319,7 @@ export default function AddProcedureModal({
                           key={treatment.id}
                           onPress={() => {
                             setSelectedTreatmentId(treatment.id);
+                            setSelectedSubclassId(null);
                             setTreatmentMenuVisible(false);
                           }}
                           title={treatment.name}
@@ -311,6 +329,41 @@ export default function AddProcedureModal({
                     </Menu>
                   )}
                 </View>
+
+                {/* Subclass Selector */}
+                {availableSubclasses.length > 0 && (
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>Sub-clase</Text>
+                    <Menu
+                      visible={subclassMenuVisible}
+                      onDismiss={() => setSubclassMenuVisible(false)}
+                      anchor={
+                        <TouchableOpacity
+                          style={[styles.dropdownButton, !!selectedSubclassId && styles.dropdownButtonSelected]}
+                          onPress={() => setSubclassMenuVisible(true)}
+                        >
+                          <Text style={[styles.dropdownButtonText, !!selectedSubclassId && styles.dropdownButtonTextSelected]}>
+                            {selectedSubclassId ? availableSubclasses.find(s => s.id === selectedSubclassId)?.name : 'Seleccione una sub-clase'}
+                          </Text>
+                          <Text style={styles.dropdownArrow}>{'\u25BC'}</Text>
+                        </TouchableOpacity>
+                      }
+                      contentStyle={styles.menuContent}
+                    >
+                      {availableSubclasses.map((subclass) => (
+                        <Menu.Item
+                          key={subclass.id}
+                          onPress={() => {
+                            setSelectedSubclassId(subclass.id);
+                            setSubclassMenuVisible(false);
+                          }}
+                          title={subclass.name}
+                          titleStyle={selectedSubclassId === subclass.id ? styles.menuItemSelected : undefined}
+                        />
+                      ))}
+                    </Menu>
+                  </View>
+                )}
 
                 {/* New vs Repair Toggle */}
                 <View style={styles.repairRow}>

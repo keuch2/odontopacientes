@@ -81,7 +81,6 @@ export default function OdontogramScreen() {
   const navigation = useNavigation()
   const route = useRoute()
   const params = route.params as { patientId: number; isPediatric?: boolean } | undefined
-  const isPediatric = params?.isPediatric ?? false
 
   const [procedures, setProcedures] = useState<PatientProcedure[]>([])
   const [chairs, setChairs] = useState<Chair[]>([])
@@ -195,8 +194,8 @@ export default function OdontogramScreen() {
   const PROSTHESIS_CHAIR_ID = 6
 
   const getTeethForProsthesis = (type: 'upper' | 'lower' | 'total'): string[] => {
-    const upper = (isPediatric ? PEDIATRIC_TOOTH_NUMBERS_UPPER : TOOTH_NUMBERS_UPPER).flat().map(String)
-    const lower = (isPediatric ? PEDIATRIC_TOOTH_NUMBERS_LOWER : TOOTH_NUMBERS_LOWER).flat().map(String)
+    const upper = TOOTH_NUMBERS_UPPER.flat().map(String)
+    const lower = TOOTH_NUMBERS_LOWER.flat().map(String)
     if (type === 'upper') return upper
     if (type === 'lower') return lower
     return [...upper, ...lower]
@@ -311,7 +310,7 @@ export default function OdontogramScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>{isPediatric ? 'Odontograma Pediátrico' : 'Odontograma'}</Text>
+        <Text style={styles.title}>Odontograma</Text>
 
         <Surface style={styles.infoCard}>
           <Text style={styles.infoText}>
@@ -397,9 +396,9 @@ export default function OdontogramScreen() {
           )}
         </Surface>
 
-        {/* Arcada Superior */}
+        {/* Arcada Superior Adulto */}
         <Surface style={styles.arcadeContainer}>
-          <Text style={styles.arcadeTitle}>Arcada Superior</Text>
+          <Text style={styles.arcadeTitle}>Arcada Superior Adulto</Text>
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={true}
@@ -408,18 +407,58 @@ export default function OdontogramScreen() {
           >
             <View style={styles.arcade}>
               <View style={styles.quadrant}>
-                {(isPediatric ? PEDIATRIC_TOOTH_NUMBERS_UPPER : TOOTH_NUMBERS_UPPER)[0].map(renderTooth)}
+                {TOOTH_NUMBERS_UPPER[0].map(renderTooth)}
               </View>
               <View style={styles.quadrant}>
-                {(isPediatric ? PEDIATRIC_TOOTH_NUMBERS_UPPER : TOOTH_NUMBERS_UPPER)[1].map(renderTooth)}
+                {TOOTH_NUMBERS_UPPER[1].map(renderTooth)}
               </View>
             </View>
           </ScrollView>
         </Surface>
 
-        {/* Arcada Inferior */}
+        {/* Arcada Superior Pediátrica */}
         <Surface style={styles.arcadeContainer}>
-          <Text style={styles.arcadeTitle}>Arcada Inferior</Text>
+          <Text style={styles.arcadeTitle}>Arcada Superior Pediátrica</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={true}
+            contentContainerStyle={styles.arcadeScrollContent}
+            nestedScrollEnabled={true}
+          >
+            <View style={[styles.arcade, { justifyContent: 'center' }]}>
+              <View style={styles.quadrant}>
+                {PEDIATRIC_TOOTH_NUMBERS_UPPER[0].map(renderTooth)}
+              </View>
+              <View style={styles.quadrant}>
+                {PEDIATRIC_TOOTH_NUMBERS_UPPER[1].map(renderTooth)}
+              </View>
+            </View>
+          </ScrollView>
+        </Surface>
+
+        {/* Arcada Inferior Pediátrica */}
+        <Surface style={styles.arcadeContainer}>
+          <Text style={styles.arcadeTitle}>Arcada Inferior Pediátrica</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={true}
+            contentContainerStyle={styles.arcadeScrollContent}
+            nestedScrollEnabled={true}
+          >
+            <View style={[styles.arcade, { justifyContent: 'center' }]}>
+              <View style={styles.quadrant}>
+                {PEDIATRIC_TOOTH_NUMBERS_LOWER[0].map(renderTooth)}
+              </View>
+              <View style={styles.quadrant}>
+                {PEDIATRIC_TOOTH_NUMBERS_LOWER[1].map(renderTooth)}
+              </View>
+            </View>
+          </ScrollView>
+        </Surface>
+
+        {/* Arcada Inferior Adulto */}
+        <Surface style={styles.arcadeContainer}>
+          <Text style={styles.arcadeTitle}>Arcada Inferior Adulto</Text>
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={true}
@@ -428,10 +467,10 @@ export default function OdontogramScreen() {
           >
             <View style={styles.arcade}>
               <View style={styles.quadrant}>
-                {(isPediatric ? PEDIATRIC_TOOTH_NUMBERS_LOWER : TOOTH_NUMBERS_LOWER)[0].map(renderTooth)}
+                {TOOTH_NUMBERS_LOWER[0].map(renderTooth)}
               </View>
               <View style={styles.quadrant}>
-                {(isPediatric ? PEDIATRIC_TOOTH_NUMBERS_LOWER : TOOTH_NUMBERS_LOWER)[1].map(renderTooth)}
+                {TOOTH_NUMBERS_LOWER[1].map(renderTooth)}
               </View>
             </View>
           </ScrollView>

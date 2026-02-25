@@ -11,8 +11,9 @@ import {
   RadioButton,
   Divider,
   Switch,
+  Menu,
 } from 'react-native-paper';
-import { Text, View, ScrollView, StyleSheet, Alert, TouchableOpacity, FlatList } from 'react-native';
+import { Text, View, ScrollView, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { api } from '../lib/api';
 
 interface Chair {
@@ -56,6 +57,10 @@ export default function AddProcedureModal({
   const [chairs, setChairs] = useState<Chair[]>([]);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [filteredTreatments, setFilteredTreatments] = useState<Treatment[]>([]);
+  
+  // Menu visibility
+  const [chairMenuVisible, setChairMenuVisible] = useState(false);
+  const [treatmentMenuVisible, setTreatmentMenuVisible] = useState(false);
   
   // Form fields
   const [selectedChairId, setSelectedChairId] = useState<number | null>(null);
@@ -238,27 +243,34 @@ export default function AddProcedureModal({
                 {/* Chair Selector */}
                 <View style={styles.field}>
                   <Text style={styles.fieldLabel}>Cátedra *</Text>
-                  <View style={styles.optionsList}>
-                    {chairs.map((chair) => (
+                  <Menu
+                    visible={chairMenuVisible}
+                    onDismiss={() => setChairMenuVisible(false)}
+                    anchor={
                       <TouchableOpacity
-                        key={chair.id}
-                        style={[
-                          styles.optionItem,
-                          selectedChairId === chair.id && styles.optionItemSelected,
-                        ]}
-                        onPress={() => setSelectedChairId(chair.id)}
+                        style={[styles.dropdownButton, !!selectedChairId && styles.dropdownButtonSelected]}
+                        onPress={() => setChairMenuVisible(true)}
                       >
-                        <Text
-                          style={[
-                            styles.optionText,
-                            selectedChairId === chair.id && styles.optionTextSelected,
-                          ]}
-                        >
-                          {chair.name}
+                        <Text style={[styles.dropdownButtonText, !!selectedChairId && styles.dropdownButtonTextSelected]}>
+                          {selectedChairId ? chairs.find(c => c.id === selectedChairId)?.name : 'Seleccione una cátedra'}
                         </Text>
+                        <Text style={styles.dropdownArrow}>▼</Text>
                       </TouchableOpacity>
+                    }
+                    contentStyle={styles.menuContent}
+                  >
+                    {chairs.map((chair) => (
+                      <Menu.Item
+                        key={chair.id}
+                        onPress={() => {
+                          setSelectedChairId(chair.id);
+                          setChairMenuVisible(false);
+                        }}
+                        title={chair.name}
+                        titleStyle={selectedChairId === chair.id ? styles.menuItemSelected : undefined}
+                      />
                     ))}
-                  </View>
+                  </Menu>
                 </View>
 
                 {/* Treatment Selector */}
@@ -269,27 +281,34 @@ export default function AddProcedureModal({
                   ) : filteredTreatments.length === 0 ? (
                     <Text style={styles.helperText}>No hay tratamientos para esta cátedra</Text>
                   ) : (
-                    <View style={styles.optionsList}>
-                      {filteredTreatments.map((treatment) => (
+                    <Menu
+                      visible={treatmentMenuVisible}
+                      onDismiss={() => setTreatmentMenuVisible(false)}
+                      anchor={
                         <TouchableOpacity
-                          key={treatment.id}
-                          style={[
-                            styles.optionItem,
-                            selectedTreatmentId === treatment.id && styles.optionItemSelected,
-                          ]}
-                          onPress={() => setSelectedTreatmentId(treatment.id)}
+                          style={[styles.dropdownButton, !!selectedTreatmentId && styles.dropdownButtonSelected]}
+                          onPress={() => setTreatmentMenuVisible(true)}
                         >
-                          <Text
-                            style={[
-                              styles.optionText,
-                              selectedTreatmentId === treatment.id && styles.optionTextSelected,
-                            ]}
-                          >
-                            {treatment.name}
+                          <Text style={[styles.dropdownButtonText, !!selectedTreatmentId && styles.dropdownButtonTextSelected]}>
+                            {selectedTreatmentId ? filteredTreatments.find(t => t.id === selectedTreatmentId)?.name : 'Seleccione un tratamiento'}
                           </Text>
+                          <Text style={styles.dropdownArrow}>▼</Text>
                         </TouchableOpacity>
+                      }
+                      contentStyle={styles.menuContent}
+                    >
+                      {filteredTreatments.map((treatment) => (
+                        <Menu.Item
+                          key={treatment.id}
+                          onPress={() => {
+                            setSelectedTreatmentId(treatment.id);
+                            setTreatmentMenuVisible(false);
+                          }}
+                          title={treatment.name}
+                          titleStyle={selectedTreatmentId === treatment.id ? styles.menuItemSelected : undefined}
+                        />
                       ))}
-                    </View>
+                    </Menu>
                   )}
                 </View>
 
@@ -450,30 +469,42 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     paddingVertical: 8,
   },
-  optionsList: {
+  dropdownButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#D1D5DB',
     borderRadius: 8,
     backgroundColor: '#F9FAFB',
-    overflow: 'hidden',
-  },
-  optionItem: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
-  optionItemSelected: {
-    backgroundColor: '#DBEAFE',
-    borderBottomColor: '#BFDBFE',
+  dropdownButtonSelected: {
+    borderColor: '#3B82F6',
+    backgroundColor: '#EFF6FF',
   },
-  optionText: {
+  dropdownButtonText: {
     fontSize: 15,
-    color: '#374151',
+    color: '#9CA3AF',
+    flex: 1,
   },
-  optionTextSelected: {
+  dropdownButtonTextSelected: {
     color: '#1D4ED8',
     fontWeight: '600',
+  },
+  dropdownArrow: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginLeft: 8,
+  },
+  menuContent: {
+    backgroundColor: 'white',
+    maxHeight: 300,
+  },
+  menuItemSelected: {
+    color: '#1D4ED8',
+    fontWeight: '700',
   },
   surfaceRow: {
     flexDirection: 'row',

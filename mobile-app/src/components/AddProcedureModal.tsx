@@ -19,9 +19,15 @@ interface Chair {
   name: string;
 }
 
+interface SubclassOption {
+  id: number;
+  name: string;
+}
+
 interface Subclass {
   id: number;
   name: string;
+  options?: SubclassOption[];
 }
 
 interface Treatment {
@@ -66,11 +72,13 @@ export default function AddProcedureModal({
   const [chairMenuVisible, setChairMenuVisible] = useState(false);
   const [treatmentMenuVisible, setTreatmentMenuVisible] = useState(false);
   const [subclassMenuVisible, setSubclassMenuVisible] = useState(false);
+  const [optionMenuVisible, setOptionMenuVisible] = useState(false);
   
   // Form fields
   const [selectedChairId, setSelectedChairId] = useState<number | null>(null);
   const [selectedTreatmentId, setSelectedTreatmentId] = useState<number | null>(null);
   const [selectedSubclassId, setSelectedSubclassId] = useState<number | null>(null);
+  const [selectedOptionId, setSelectedOptionId] = useState<number | null>(null);
   const [toothSurface, setToothSurface] = useState('');
   const [status, setStatus] = useState('disponible');
   const [sessionsTotal, setSessionsTotal] = useState('1');
@@ -93,11 +101,13 @@ export default function AddProcedureModal({
       if (selectedTreatmentId && !filtered.find(t => t.id === selectedTreatmentId)) {
         setSelectedTreatmentId(null);
         setSelectedSubclassId(null);
+        setSelectedOptionId(null);
       }
     } else {
       setFilteredTreatments([]);
       setSelectedTreatmentId(null);
       setSelectedSubclassId(null);
+      setSelectedOptionId(null);
     }
   }, [selectedChairId, treatments]);
 
@@ -106,6 +116,10 @@ export default function AddProcedureModal({
     ? filteredTreatments.find(t => t.id === selectedTreatmentId)
     : null;
   const availableSubclasses = selectedTreatment?.subclasses || [];
+  const selectedSubclass = selectedSubclassId
+    ? availableSubclasses.find(s => s.id === selectedSubclassId)
+    : null;
+  const availableOptions = selectedSubclass?.options || [];
 
   const loadData = async () => {
     setLoadingData(true);
@@ -143,6 +157,7 @@ export default function AddProcedureModal({
         await api.procedures.createForPatient(patientId, {
           treatment_id: selectedTreatmentId,
           treatment_subclass_id: selectedSubclassId || null,
+          treatment_subclass_option_id: selectedOptionId || null,
           tooth_fdi: toothFdi,
           tooth_surface: toothSurface || null,
           is_repair: isRepair,
@@ -171,6 +186,7 @@ export default function AddProcedureModal({
     setSelectedChairId(null);
     setSelectedTreatmentId(null);
     setSelectedSubclassId(null);
+    setSelectedOptionId(null);
     setToothSurface('');
     setStatus('disponible');
     setSessionsTotal('1');
@@ -299,9 +315,40 @@ export default function AddProcedureModal({
                             <TouchableOpacity
                               key={subclass.id}
                               style={[styles.optionItem, selectedSubclassId === subclass.id && styles.optionItemSelected]}
-                              onPress={() => { setSelectedSubclassId(subclass.id); setSubclassMenuVisible(false); }}
+                              onPress={() => { setSelectedSubclassId(subclass.id); setSelectedOptionId(null); setSubclassMenuVisible(false); }}
                             >
                               <Text style={[styles.optionText, selectedSubclassId === subclass.id && styles.optionTextSelected]}>{subclass.name}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {/* Subclass Option Selector */}
+                {availableOptions.length > 0 && (
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>Sub-clase adicional</Text>
+                    <TouchableOpacity
+                      style={[styles.dropdownButton, !!selectedOptionId && styles.dropdownButtonSelected]}
+                      onPress={() => { setOptionMenuVisible(!optionMenuVisible); setChairMenuVisible(false); setTreatmentMenuVisible(false); setSubclassMenuVisible(false); }}
+                    >
+                      <Text style={[styles.dropdownButtonText, !!selectedOptionId && styles.dropdownButtonTextSelected]}>
+                        {selectedOptionId ? availableOptions.find(o => o.id === selectedOptionId)?.name : 'Seleccione una opción'}
+                      </Text>
+                      <Text style={styles.dropdownArrow}>{optionMenuVisible ? '▲' : '▼'}</Text>
+                    </TouchableOpacity>
+                    {optionMenuVisible && (
+                      <View style={styles.optionsList}>
+                        <ScrollView nestedScrollEnabled style={styles.optionsScroll}>
+                          {availableOptions.map((option) => (
+                            <TouchableOpacity
+                              key={option.id}
+                              style={[styles.optionItem, selectedOptionId === option.id && styles.optionItemSelected]}
+                              onPress={() => { setSelectedOptionId(option.id); setOptionMenuVisible(false); }}
+                            >
+                              <Text style={[styles.optionText, selectedOptionId === option.id && styles.optionTextSelected]}>{option.name}</Text>
                             </TouchableOpacity>
                           ))}
                         </ScrollView>

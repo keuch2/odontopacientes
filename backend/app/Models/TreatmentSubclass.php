@@ -28,6 +28,11 @@ class TreatmentSubclass extends Model
         return $this->belongsTo(Treatment::class);
     }
 
+    public function options(): HasMany
+    {
+        return $this->hasMany(TreatmentSubclassOption::class)->orderBy('sort_order')->orderBy('name');
+    }
+
     public function patientProcedures(): HasMany
     {
         return $this->hasMany(PatientProcedure::class);

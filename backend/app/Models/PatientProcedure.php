@@ -16,6 +16,7 @@ class PatientProcedure extends Model
         'patient_id',
         'treatment_id',
         'treatment_subclass_id',
+        'treatment_subclass_option_id',
         'chair_id',
         'tooth_fdi',
         'tooth_surface',
@@ -58,6 +59,14 @@ class PatientProcedure extends Model
     public function treatmentSubclass(): BelongsTo
     {
         return $this->belongsTo(TreatmentSubclass::class);
+    }
+
+    /**
+     * Opción de sub-clase del tratamiento
+     */
+    public function treatmentSubclassOption(): BelongsTo
+    {
+        return $this->belongsTo(TreatmentSubclassOption::class);
     }
 
     /**

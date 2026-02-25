@@ -11,9 +11,8 @@ import {
   RadioButton,
   Divider,
   Switch,
-  Menu,
 } from 'react-native-paper';
-import { Text, View, ScrollView, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { Text, View, ScrollView, StyleSheet, Alert, TouchableOpacity, FlatList } from 'react-native';
 import { api } from '../lib/api';
 
 interface Chair {
@@ -260,34 +259,30 @@ export default function AddProcedureModal({
                 {/* Chair Selector */}
                 <View style={styles.field}>
                   <Text style={styles.fieldLabel}>Cátedra *</Text>
-                  <Menu
-                    visible={chairMenuVisible}
-                    onDismiss={() => setChairMenuVisible(false)}
-                    anchor={
-                      <TouchableOpacity
-                        style={[styles.dropdownButton, !!selectedChairId && styles.dropdownButtonSelected]}
-                        onPress={() => setChairMenuVisible(true)}
-                      >
-                        <Text style={[styles.dropdownButtonText, !!selectedChairId && styles.dropdownButtonTextSelected]}>
-                          {selectedChairId ? chairs.find(c => c.id === selectedChairId)?.name : 'Seleccione una cátedra'}
-                        </Text>
-                        <Text style={styles.dropdownArrow}>▼</Text>
-                      </TouchableOpacity>
-                    }
-                    contentStyle={styles.menuContent}
+                  <TouchableOpacity
+                    style={[styles.dropdownButton, !!selectedChairId && styles.dropdownButtonSelected]}
+                    onPress={() => { setChairMenuVisible(!chairMenuVisible); setTreatmentMenuVisible(false); setSubclassMenuVisible(false); }}
                   >
-                    {chairs.map((chair) => (
-                      <Menu.Item
-                        key={chair.id}
-                        onPress={() => {
-                          setSelectedChairId(chair.id);
-                          setChairMenuVisible(false);
-                        }}
-                        title={chair.name}
-                        titleStyle={selectedChairId === chair.id ? styles.menuItemSelected : undefined}
-                      />
-                    ))}
-                  </Menu>
+                    <Text style={[styles.dropdownButtonText, !!selectedChairId && styles.dropdownButtonTextSelected]}>
+                      {selectedChairId ? chairs.find(c => c.id === selectedChairId)?.name : 'Seleccione una cátedra'}
+                    </Text>
+                    <Text style={styles.dropdownArrow}>{chairMenuVisible ? '▲' : '▼'}</Text>
+                  </TouchableOpacity>
+                  {chairMenuVisible && (
+                    <View style={styles.optionsList}>
+                      <ScrollView nestedScrollEnabled style={styles.optionsScroll}>
+                        {chairs.map((chair) => (
+                          <TouchableOpacity
+                            key={chair.id}
+                            style={[styles.optionItem, selectedChairId === chair.id && styles.optionItemSelected]}
+                            onPress={() => { setSelectedChairId(chair.id); setChairMenuVisible(false); }}
+                          >
+                            <Text style={[styles.optionText, selectedChairId === chair.id && styles.optionTextSelected]}>{chair.name}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
                 </View>
 
                 {/* Treatment Selector */}
@@ -298,35 +293,32 @@ export default function AddProcedureModal({
                   ) : filteredTreatments.length === 0 ? (
                     <Text style={styles.helperText}>No hay tratamientos para esta cátedra</Text>
                   ) : (
-                    <Menu
-                      visible={treatmentMenuVisible}
-                      onDismiss={() => setTreatmentMenuVisible(false)}
-                      anchor={
-                        <TouchableOpacity
-                          style={[styles.dropdownButton, !!selectedTreatmentId && styles.dropdownButtonSelected]}
-                          onPress={() => setTreatmentMenuVisible(true)}
-                        >
-                          <Text style={[styles.dropdownButtonText, !!selectedTreatmentId && styles.dropdownButtonTextSelected]}>
-                            {selectedTreatmentId ? filteredTreatments.find(t => t.id === selectedTreatmentId)?.name : 'Seleccione un tratamiento'}
-                          </Text>
-                          <Text style={styles.dropdownArrow}>▼</Text>
-                        </TouchableOpacity>
-                      }
-                      contentStyle={styles.menuContent}
-                    >
-                      {filteredTreatments.map((treatment) => (
-                        <Menu.Item
-                          key={treatment.id}
-                          onPress={() => {
-                            setSelectedTreatmentId(treatment.id);
-                            setSelectedSubclassId(null);
-                            setTreatmentMenuVisible(false);
-                          }}
-                          title={treatment.name}
-                          titleStyle={selectedTreatmentId === treatment.id ? styles.menuItemSelected : undefined}
-                        />
-                      ))}
-                    </Menu>
+                    <>
+                      <TouchableOpacity
+                        style={[styles.dropdownButton, !!selectedTreatmentId && styles.dropdownButtonSelected]}
+                        onPress={() => { setTreatmentMenuVisible(!treatmentMenuVisible); setChairMenuVisible(false); setSubclassMenuVisible(false); }}
+                      >
+                        <Text style={[styles.dropdownButtonText, !!selectedTreatmentId && styles.dropdownButtonTextSelected]}>
+                          {selectedTreatmentId ? filteredTreatments.find(t => t.id === selectedTreatmentId)?.name : 'Seleccione un tratamiento'}
+                        </Text>
+                        <Text style={styles.dropdownArrow}>{treatmentMenuVisible ? '▲' : '▼'}</Text>
+                      </TouchableOpacity>
+                      {treatmentMenuVisible && (
+                        <View style={styles.optionsList}>
+                          <ScrollView nestedScrollEnabled style={styles.optionsScroll}>
+                            {filteredTreatments.map((treatment) => (
+                              <TouchableOpacity
+                                key={treatment.id}
+                                style={[styles.optionItem, selectedTreatmentId === treatment.id && styles.optionItemSelected]}
+                                onPress={() => { setSelectedTreatmentId(treatment.id); setSelectedSubclassId(null); setTreatmentMenuVisible(false); }}
+                              >
+                                <Text style={[styles.optionText, selectedTreatmentId === treatment.id && styles.optionTextSelected]}>{treatment.name}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+                        </View>
+                      )}
+                    </>
                   )}
                 </View>
 
@@ -334,34 +326,30 @@ export default function AddProcedureModal({
                 {availableSubclasses.length > 0 && (
                   <View style={styles.field}>
                     <Text style={styles.fieldLabel}>Sub-clase</Text>
-                    <Menu
-                      visible={subclassMenuVisible}
-                      onDismiss={() => setSubclassMenuVisible(false)}
-                      anchor={
-                        <TouchableOpacity
-                          style={[styles.dropdownButton, !!selectedSubclassId && styles.dropdownButtonSelected]}
-                          onPress={() => setSubclassMenuVisible(true)}
-                        >
-                          <Text style={[styles.dropdownButtonText, !!selectedSubclassId && styles.dropdownButtonTextSelected]}>
-                            {selectedSubclassId ? availableSubclasses.find(s => s.id === selectedSubclassId)?.name : 'Seleccione una sub-clase'}
-                          </Text>
-                          <Text style={styles.dropdownArrow}>{'\u25BC'}</Text>
-                        </TouchableOpacity>
-                      }
-                      contentStyle={styles.menuContent}
+                    <TouchableOpacity
+                      style={[styles.dropdownButton, !!selectedSubclassId && styles.dropdownButtonSelected]}
+                      onPress={() => { setSubclassMenuVisible(!subclassMenuVisible); setChairMenuVisible(false); setTreatmentMenuVisible(false); }}
                     >
-                      {availableSubclasses.map((subclass) => (
-                        <Menu.Item
-                          key={subclass.id}
-                          onPress={() => {
-                            setSelectedSubclassId(subclass.id);
-                            setSubclassMenuVisible(false);
-                          }}
-                          title={subclass.name}
-                          titleStyle={selectedSubclassId === subclass.id ? styles.menuItemSelected : undefined}
-                        />
-                      ))}
-                    </Menu>
+                      <Text style={[styles.dropdownButtonText, !!selectedSubclassId && styles.dropdownButtonTextSelected]}>
+                        {selectedSubclassId ? availableSubclasses.find(s => s.id === selectedSubclassId)?.name : 'Seleccione una sub-clase'}
+                      </Text>
+                      <Text style={styles.dropdownArrow}>{subclassMenuVisible ? '▲' : '▼'}</Text>
+                    </TouchableOpacity>
+                    {subclassMenuVisible && (
+                      <View style={styles.optionsList}>
+                        <ScrollView nestedScrollEnabled style={styles.optionsScroll}>
+                          {availableSubclasses.map((subclass) => (
+                            <TouchableOpacity
+                              key={subclass.id}
+                              style={[styles.optionItem, selectedSubclassId === subclass.id && styles.optionItemSelected]}
+                              onPress={() => { setSelectedSubclassId(subclass.id); setSubclassMenuVisible(false); }}
+                            >
+                              <Text style={[styles.optionText, selectedSubclassId === subclass.id && styles.optionTextSelected]}>{subclass.name}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    )}
                   </View>
                 )}
 
@@ -551,13 +539,34 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginLeft: 8,
   },
-  menuContent: {
+  optionsList: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
     backgroundColor: 'white',
-    maxHeight: 300,
+    overflow: 'hidden' as const,
   },
-  menuItemSelected: {
+  optionsScroll: {
+    maxHeight: 200,
+  },
+  optionItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E7EB',
+  },
+  optionItemSelected: {
+    backgroundColor: '#EFF6FF',
+  },
+  optionText: {
+    fontSize: 15,
+    color: '#374151',
+  },
+  optionTextSelected: {
     color: '#1D4ED8',
-    fontWeight: '700',
+    fontWeight: '700' as const,
   },
   surfaceRow: {
     flexDirection: 'row',

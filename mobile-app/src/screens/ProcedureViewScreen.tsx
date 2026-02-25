@@ -57,6 +57,7 @@ export default function ProcedureViewScreen() {
   const [editChairId, setEditChairId] = useState<number | null>(null)
   const [editTreatmentId, setEditTreatmentId] = useState<number | null>(null)
   const [editSubclassId, setEditSubclassId] = useState<number | null>(null)
+  const [editOptionId, setEditOptionId] = useState<number | null>(null)
   const [editNotes, setEditNotes] = useState('')
   const [chairs, setChairs] = useState<any[]>([])
   const [treatments, setTreatments] = useState<any[]>([])
@@ -185,6 +186,7 @@ export default function ProcedureViewScreen() {
     setEditChairId(procedure.chair?.id || null)
     setEditTreatmentId(procedure.treatment?.id || null)
     setEditSubclassId(procedure.treatment_subclass?.id || null)
+    setEditOptionId(procedure.treatment_subclass_option?.id || null)
     setEditNotes(procedure.notes || '')
     try {
       const chairsRes = await api.chairs.list()
@@ -203,6 +205,7 @@ export default function ProcedureViewScreen() {
     setEditChairId(chairId)
     setEditTreatmentId(null)
     setEditSubclassId(null)
+    setEditOptionId(null)
     try {
       const res = await api.treatments.list({ chair_id: chairId })
       setTreatments(res.data.data || [])
@@ -222,6 +225,7 @@ export default function ProcedureViewScreen() {
         chair_id: editChairId,
         treatment_id: editTreatmentId,
         treatment_subclass_id: editSubclassId,
+        treatment_subclass_option_id: editOptionId,
         notes: editNotes.trim() || undefined,
       })
       Alert.alert('Éxito', 'Procedimiento actualizado')
@@ -555,6 +559,11 @@ export default function ProcedureViewScreen() {
               {procedure.treatment_subclass && (
                 <AppText color="textMuted" style={styles.procedureMeta}>
                   Sub-clase: {procedure.treatment_subclass.name}
+                </AppText>
+              )}
+              {procedure.treatment_subclass_option && (
+                <AppText color="textMuted" style={styles.procedureMeta}>
+                  Sub-clase adicional: {procedure.treatment_subclass_option.name}
                 </AppText>
               )}
             </View>
@@ -935,7 +944,7 @@ export default function ProcedureViewScreen() {
                           styles.editTreatmentItem,
                           editSubclassId === sc.id && styles.editTreatmentItemActive,
                         ]}
-                        onPress={() => setEditSubclassId(editSubclassId === sc.id ? null : sc.id)}
+                        onPress={() => { setEditSubclassId(editSubclassId === sc.id ? null : sc.id); setEditOptionId(null); }}
                       >
                         <AppText
                           color={editSubclassId === sc.id ? 'white' : 'brandNavy'}
@@ -949,6 +958,39 @@ export default function ProcedureViewScreen() {
                   </View>
                 </>
               )}
+
+              {/* Subclass Option Selector */}
+              {editSubclassId && (() => {
+                const selectedTreatment = treatments.find((t: any) => t.id === editTreatmentId)
+                const selectedSubclass = selectedTreatment?.subclasses?.find((s: any) => s.id === editSubclassId)
+                const options = selectedSubclass?.options || []
+                if (options.length === 0) return null
+                return (
+                  <>
+                    <AppText color="brandNavy" weight="semibold" style={{ marginBottom: 8 }}>Sub-clase adicional</AppText>
+                    <View style={{ marginBottom: spacing.md }}>
+                      {options.map((opt: any) => (
+                        <TouchableOpacity
+                          key={opt.id}
+                          style={[
+                            styles.editTreatmentItem,
+                            editOptionId === opt.id && styles.editTreatmentItemActive,
+                          ]}
+                          onPress={() => setEditOptionId(editOptionId === opt.id ? null : opt.id)}
+                        >
+                          <AppText
+                            color={editOptionId === opt.id ? 'white' : 'brandNavy'}
+                            weight={editOptionId === opt.id ? 'bold' : 'normal'}
+                            style={{ fontSize: 14 }}
+                          >
+                            {opt.name}
+                          </AppText>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                )
+              })()}
 
               <AppText color="brandNavy" weight="semibold" style={{ marginBottom: 8 }}>Notas</AppText>
               <TextInput

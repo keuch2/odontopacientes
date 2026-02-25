@@ -17,6 +17,14 @@ interface PatientProcedure {
     id: number
     name: string
   }
+  treatment_subclass?: {
+    id: number
+    name: string
+  } | null
+  treatment_subclass_option?: {
+    id: number
+    name: string
+  } | null
   tooth_fdi: string | null
   tooth_surface: string | null
   status: 'disponible' | 'proceso' | 'finalizado' | 'contraindicado' | 'ausente' | 'cancelado'
@@ -544,6 +552,12 @@ export default function OdontogramScreen() {
                       </View>
                       <Text style={styles.procedureCode}>Código: {procedure.treatment.code}</Text>
                       <Text style={styles.procedureChair}>Cátedra: {procedure.chair.name}</Text>
+                      {procedure.treatment_subclass && (
+                        <Text style={styles.procedureChair}>Sub-clase: {procedure.treatment_subclass.name}</Text>
+                      )}
+                      {procedure.treatment_subclass_option && (
+                        <Text style={styles.procedureChair}>Sub-clase adicional: {procedure.treatment_subclass_option.name}</Text>
+                      )}
                       {procedure.tooth_surface && (
                         <Text style={styles.procedureSurface}>Superficie: {procedure.tooth_surface}</Text>
                       )}

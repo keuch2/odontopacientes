@@ -34,7 +34,9 @@ class AssignmentsController extends Controller
         // Consultar asignaciones reales de la base de datos
         $assignments = Assignment::with([
                 'patientProcedure.patient',
-                'patientProcedure.treatment.chair'
+                'patientProcedure.treatment.chair',
+                'patientProcedure.treatmentSubclass',
+                'patientProcedure.treatmentSubclassOption',
             ])
             ->where('student_id', $user['id'])
             ->whereIn('status', ['activa', 'completada'])
@@ -52,6 +54,14 @@ class AssignmentsController extends Controller
                             'name' => $assignment->patientProcedure->treatment->name,
                             'estimated_sessions' => $assignment->patientProcedure->treatment->estimated_sessions ?? 1,
                         ],
+                        'treatment_subclass' => $assignment->patientProcedure->treatmentSubclass ? [
+                            'id' => $assignment->patientProcedure->treatmentSubclass->id,
+                            'name' => $assignment->patientProcedure->treatmentSubclass->name,
+                        ] : null,
+                        'treatment_subclass_option' => $assignment->patientProcedure->treatmentSubclassOption ? [
+                            'id' => $assignment->patientProcedure->treatmentSubclassOption->id,
+                            'name' => $assignment->patientProcedure->treatmentSubclassOption->name,
+                        ] : null,
                         'chair' => [
                             'id' => $assignment->patientProcedure->treatment->chair->id,
                             'name' => $assignment->patientProcedure->treatment->chair->name,
@@ -121,7 +131,9 @@ class AssignmentsController extends Controller
         // Buscar asignación en la base de datos
         $assignment = Assignment::with([
                 'patientProcedure.patient',
-                'patientProcedure.treatment.chair'
+                'patientProcedure.treatment.chair',
+                'patientProcedure.treatmentSubclass',
+                'patientProcedure.treatmentSubclassOption',
             ])
             ->where('id', $id)
             ->where('student_id', $user['id'])
@@ -146,6 +158,14 @@ class AssignmentsController extends Controller
                     'description' => $assignment->patientProcedure->treatment->description,
                     'estimated_sessions' => $assignment->patientProcedure->treatment->estimated_sessions ?? 1,
                 ],
+                'treatment_subclass' => $assignment->patientProcedure->treatmentSubclass ? [
+                    'id' => $assignment->patientProcedure->treatmentSubclass->id,
+                    'name' => $assignment->patientProcedure->treatmentSubclass->name,
+                ] : null,
+                'treatment_subclass_option' => $assignment->patientProcedure->treatmentSubclassOption ? [
+                    'id' => $assignment->patientProcedure->treatmentSubclassOption->id,
+                    'name' => $assignment->patientProcedure->treatmentSubclassOption->name,
+                ] : null,
                 'chair' => [
                     'id' => $assignment->patientProcedure->treatment->chair->id,
                     'name' => $assignment->patientProcedure->treatment->chair->name,

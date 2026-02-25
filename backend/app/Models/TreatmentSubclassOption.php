@@ -7,12 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class TreatmentSubclass extends Model
+class TreatmentSubclassOption extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'treatment_id',
+        'treatment_subclass_id',
         'name',
         'sort_order',
         'active',
@@ -23,14 +23,9 @@ class TreatmentSubclass extends Model
         'active' => 'boolean',
     ];
 
-    public function treatment(): BelongsTo
+    public function subclass(): BelongsTo
     {
-        return $this->belongsTo(Treatment::class);
-    }
-
-    public function options(): HasMany
-    {
-        return $this->hasMany(TreatmentSubclassOption::class)->orderBy('sort_order')->orderBy('name');
+        return $this->belongsTo(TreatmentSubclass::class, 'treatment_subclass_id');
     }
 
     public function patientProcedures(): HasMany

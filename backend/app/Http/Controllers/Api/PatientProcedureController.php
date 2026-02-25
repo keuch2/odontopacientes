@@ -18,7 +18,7 @@ class PatientProcedureController extends Controller
     public function index(Patient $patient)
     {
         $procedures = $patient->patientProcedures()
-            ->with(['treatment.subclasses', 'chair', 'activeAssignment.student', 'treatmentSubclass'])
+            ->with(['treatment.subclasses', 'chair', 'activeAssignment.student', 'treatmentSubclass', 'treatmentSubclassOption'])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -40,6 +40,10 @@ class PatientProcedureController extends Controller
                     'treatment_subclass' => $procedure->treatmentSubclass ? [
                         'id' => $procedure->treatmentSubclass->id,
                         'name' => $procedure->treatmentSubclass->name,
+                    ] : null,
+                    'treatment_subclass_option' => $procedure->treatmentSubclassOption ? [
+                        'id' => $procedure->treatmentSubclassOption->id,
+                        'name' => $procedure->treatmentSubclassOption->name,
                     ] : null,
                     'chair' => [
                         'id' => $procedure->chair->id,
@@ -81,6 +85,7 @@ class PatientProcedureController extends Controller
         $validator = Validator::make($request->all(), [
             'treatment_id' => $isAusente ? 'nullable|exists:treatments,id' : 'required|exists:treatments,id',
             'treatment_subclass_id' => 'nullable|exists:treatment_subclasses,id',
+            'treatment_subclass_option_id' => 'nullable|exists:treatment_subclass_options,id',
             'chair_id' => 'nullable|exists:chairs,id',
             'tooth_description' => 'nullable|string|max:255',
             'tooth_fdi' => 'required|string|max:255',
@@ -131,6 +136,7 @@ class PatientProcedureController extends Controller
             'patient_id' => $patient->id,
             'treatment_id' => $treatment->id,
             'treatment_subclass_id' => $request->treatment_subclass_id,
+            'treatment_subclass_option_id' => $request->treatment_subclass_option_id,
             'chair_id' => $chairId,
             'tooth_fdi' => $request->tooth_fdi,
             'tooth_surface' => $request->tooth_surface,
@@ -212,7 +218,8 @@ class PatientProcedureController extends Controller
             'chair',
             'activeAssignment.student',
             'createdBy',
-            'treatmentSubclass'
+            'treatmentSubclass',
+            'treatmentSubclassOption'
         ]);
 
         return response()->json([
@@ -239,6 +246,10 @@ class PatientProcedureController extends Controller
                 'treatment_subclass' => $patientProcedure->treatmentSubclass ? [
                     'id' => $patientProcedure->treatmentSubclass->id,
                     'name' => $patientProcedure->treatmentSubclass->name,
+                ] : null,
+                'treatment_subclass_option' => $patientProcedure->treatmentSubclassOption ? [
+                    'id' => $patientProcedure->treatmentSubclassOption->id,
+                    'name' => $patientProcedure->treatmentSubclassOption->name,
                 ] : null,
                 'chair' => [
                     'id' => $patientProcedure->chair->id,
@@ -296,6 +307,7 @@ class PatientProcedureController extends Controller
         $validator = Validator::make($request->all(), [
             'treatment_id' => 'sometimes|required|exists:treatments,id',
             'treatment_subclass_id' => 'nullable|exists:treatment_subclasses,id',
+            'treatment_subclass_option_id' => 'nullable|exists:treatment_subclass_options,id',
             'chair_id' => 'sometimes|required|exists:chairs,id',
             'tooth_description' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
@@ -338,7 +350,7 @@ class PatientProcedureController extends Controller
         $oldData = $patientProcedure->toArray();
 
         $updateData = $request->only([
-            'treatment_id', 'treatment_subclass_id', 'chair_id', 'tooth_description', 'notes', 'status'
+            'treatment_id', 'treatment_subclass_id', 'treatment_subclass_option_id', 'chair_id', 'tooth_description', 'notes', 'status'
         ]);
 
         if ($request->has('priority')) {

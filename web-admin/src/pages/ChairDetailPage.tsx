@@ -45,6 +45,9 @@ export default function ChairDetailPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
   const [subclassInput, setSubclassInput] = useState<Record<number, string>>({})
   const [editingSubclass, setEditingSubclass] = useState<{ treatmentId: number; subclassId: number; name: string } | null>(null)
+  const [optionInput, setOptionInput] = useState<Record<number, string>>({})
+  const [editingOption, setEditingOption] = useState<{ subclassId: number; optionId: number; name: string } | null>(null)
+  const [expandedSubclass, setExpandedSubclass] = useState<number | null>(null)
 
   const { data: chairData, isLoading: chairLoading } = useQuery({
     queryKey: ['chair', id],
@@ -99,6 +102,32 @@ export default function ChairDetailPage() {
   const deleteSubclassMutation = useMutation({
     mutationFn: ({ treatmentId, subclassId }: { treatmentId: number; subclassId: number }) =>
       api.treatmentSubclasses.delete(treatmentId, subclassId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chair', id] })
+    },
+  })
+
+  const createOptionMutation = useMutation({
+    mutationFn: ({ subclassId, name }: { subclassId: number; name: string }) =>
+      api.subclassOptions.create(subclassId, { name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chair', id] })
+      setOptionInput({})
+    },
+  })
+
+  const updateOptionMutation = useMutation({
+    mutationFn: ({ subclassId, optionId, name }: { subclassId: number; optionId: number; name: string }) =>
+      api.subclassOptions.update(subclassId, optionId, { name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chair', id] })
+      setEditingOption(null)
+    },
+  })
+
+  const deleteOptionMutation = useMutation({
+    mutationFn: ({ subclassId, optionId }: { subclassId: number; optionId: number }) =>
+      api.subclassOptions.delete(subclassId, optionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chair', id] })
     },
@@ -317,49 +346,138 @@ export default function ChairDetailPage() {
                     {treatment.subclasses && treatment.subclasses.length > 0 && (
                       <div className="space-y-1 mb-2">
                         {treatment.subclasses.map((sc: any) => (
-                          <div key={sc.id} className="flex items-center justify-between bg-gray-50 rounded px-2 py-1 text-sm">
-                            {editingSubclass?.subclassId === sc.id ? (
-                              <form
-                                className="flex items-center gap-1 flex-1"
-                                onSubmit={(e) => {
-                                  e.preventDefault()
-                                  if (editingSubclass.name.trim()) {
-                                    updateSubclassMutation.mutate({
-                                      treatmentId: treatment.id,
-                                      subclassId: sc.id,
-                                      name: editingSubclass.name.trim(),
-                                    })
-                                  }
-                                }}
-                              >
-                                <input
-                                  type="text"
-                                  value={editingSubclass.name}
-                                  onChange={(e) => setEditingSubclass({ ...editingSubclass, name: e.target.value })}
-                                  className="flex-1 border border-gray-300 rounded px-2 py-0.5 text-xs focus:ring-1 focus:ring-blue-500"
-                                  autoFocus
-                                />
-                                <button type="submit" className="text-green-600 hover:text-green-700 text-xs font-medium">OK</button>
-                                <button type="button" onClick={() => setEditingSubclass(null)} className="text-gray-400 hover:text-gray-600 text-xs">Cancelar</button>
-                              </form>
-                            ) : (
-                              <>
-                                <span className="text-gray-700">{sc.name}</span>
-                                <div className="flex gap-1">
+                          <div key={sc.id} className="bg-gray-50 rounded px-2 py-1 text-sm">
+                            <div className="flex items-center justify-between">
+                              {editingSubclass?.subclassId === sc.id ? (
+                                <form
+                                  className="flex items-center gap-1 flex-1"
+                                  onSubmit={(e) => {
+                                    e.preventDefault()
+                                    if (editingSubclass!.name.trim()) {
+                                      updateSubclassMutation.mutate({
+                                        treatmentId: treatment.id,
+                                        subclassId: sc.id,
+                                        name: editingSubclass!.name.trim(),
+                                      })
+                                    }
+                                  }}
+                                >
+                                  <input
+                                    type="text"
+                                    value={editingSubclass!.name}
+                                    onChange={(e) => setEditingSubclass({ ...editingSubclass!, treatmentId: editingSubclass!.treatmentId, subclassId: editingSubclass!.subclassId, name: e.target.value })}
+                                    className="flex-1 border border-gray-300 rounded px-2 py-0.5 text-xs focus:ring-1 focus:ring-blue-500"
+                                    autoFocus
+                                  />
+                                  <button type="submit" className="text-green-600 hover:text-green-700 text-xs font-medium">OK</button>
+                                  <button type="button" onClick={() => setEditingSubclass(null)} className="text-gray-400 hover:text-gray-600 text-xs">Cancelar</button>
+                                </form>
+                              ) : (
+                                <>
                                   <button
-                                    onClick={() => setEditingSubclass({ treatmentId: treatment.id, subclassId: sc.id, name: sc.name })}
-                                    className="text-gray-400 hover:text-blue-600"
+                                    className="text-gray-700 hover:text-blue-600 flex items-center gap-1 cursor-pointer"
+                                    onClick={() => setExpandedSubclass(expandedSubclass === sc.id ? null : sc.id)}
                                   >
-                                    <Edit2 className="h-3 w-3" />
+                                    <span>{sc.name}</span>
+                                    {sc.options && sc.options.length > 0 && (
+                                      <span className="text-xs text-gray-400">({sc.options.length})</span>
+                                    )}
+                                    <span className="text-xs text-gray-400">{expandedSubclass === sc.id ? '▲' : '▼'}</span>
                                   </button>
+                                  <div className="flex gap-1">
+                                    <button
+                                      onClick={() => setEditingSubclass({ treatmentId: treatment.id, subclassId: sc.id, name: sc.name })}
+                                      className="text-gray-400 hover:text-blue-600"
+                                    >
+                                      <Edit2 className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                      onClick={() => deleteSubclassMutation.mutate({ treatmentId: treatment.id, subclassId: sc.id })}
+                                      className="text-gray-400 hover:text-red-600"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                            {/* Subclass Options */}
+                            {expandedSubclass === sc.id && (
+                              <div className="mt-1 ml-3 pl-2 border-l-2 border-blue-200 space-y-1">
+                                {sc.options && sc.options.length > 0 && sc.options.map((opt: any) => (
+                                  <div key={opt.id} className="flex items-center justify-between bg-white rounded px-2 py-0.5 text-xs">
+                                    {editingOption?.optionId === opt.id ? (
+                                      <form
+                                        className="flex items-center gap-1 flex-1"
+                                        onSubmit={(e) => {
+                                          e.preventDefault()
+                                          if (editingOption!.name.trim()) {
+                                            updateOptionMutation.mutate({
+                                              subclassId: sc.id,
+                                              optionId: opt.id,
+                                              name: editingOption!.name.trim(),
+                                            })
+                                          }
+                                        }}
+                                      >
+                                        <input
+                                          type="text"
+                                          value={editingOption!.name}
+                                          onChange={(e) => setEditingOption({ subclassId: editingOption!.subclassId, optionId: editingOption!.optionId, name: e.target.value })}
+                                          className="flex-1 border border-gray-300 rounded px-1.5 py-0.5 text-xs focus:ring-1 focus:ring-blue-500"
+                                          autoFocus
+                                        />
+                                        <button type="submit" className="text-green-600 hover:text-green-700 text-xs font-medium">OK</button>
+                                        <button type="button" onClick={() => setEditingOption(null)} className="text-gray-400 hover:text-gray-600 text-xs">✕</button>
+                                      </form>
+                                    ) : (
+                                      <>
+                                        <span className="text-gray-600">{opt.name}</span>
+                                        <div className="flex gap-1">
+                                          <button
+                                            onClick={() => setEditingOption({ subclassId: sc.id, optionId: opt.id, name: opt.name })}
+                                            className="text-gray-400 hover:text-blue-600"
+                                          >
+                                            <Edit2 className="h-2.5 w-2.5" />
+                                          </button>
+                                          <button
+                                            onClick={() => deleteOptionMutation.mutate({ subclassId: sc.id, optionId: opt.id })}
+                                            className="text-gray-400 hover:text-red-600"
+                                          >
+                                            <Trash2 className="h-2.5 w-2.5" />
+                                          </button>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                ))}
+                                <form
+                                  className="flex items-center gap-1"
+                                  onSubmit={(e) => {
+                                    e.preventDefault()
+                                    const name = (optionInput[sc.id] || '').trim()
+                                    if (name) {
+                                      createOptionMutation.mutate({ subclassId: sc.id, name })
+                                    }
+                                  }}
+                                >
+                                  <input
+                                    type="text"
+                                    value={optionInput[sc.id] || ''}
+                                    onChange={(e) => setOptionInput({ ...optionInput, [sc.id]: e.target.value })}
+                                    className="flex-1 border border-gray-300 rounded px-1.5 py-0.5 text-xs focus:ring-1 focus:ring-blue-500"
+                                    placeholder="Nueva opción..."
+                                    maxLength={255}
+                                  />
                                   <button
-                                    onClick={() => deleteSubclassMutation.mutate({ treatmentId: treatment.id, subclassId: sc.id })}
-                                    className="text-gray-400 hover:text-red-600"
+                                    type="submit"
+                                    className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-1.5 py-0.5 rounded font-medium"
+                                    disabled={createOptionMutation.isPending}
                                   >
-                                    <Trash2 className="h-3 w-3" />
+                                    {createOptionMutation.isPending ? '...' : '+'}
                                   </button>
-                                </div>
-                              </>
+                                </form>
+                              </div>
                             )}
                           </div>
                         ))}

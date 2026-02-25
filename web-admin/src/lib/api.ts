@@ -215,6 +215,21 @@ export const api = {
       apiClient.delete<ApiResponse>(`/treatments/${treatmentId}/subclasses/${subclassId}`),
   },
 
+  // Opciones de sub-clases
+  subclassOptions: {
+    getAll: (subclassId: number) =>
+      apiClient.get<ApiResponse>(`/subclasses/${subclassId}/options`),
+
+    create: (subclassId: number, data: any) =>
+      apiClient.post<ApiResponse>(`/subclasses/${subclassId}/options`, data),
+
+    update: (subclassId: number, optionId: number, data: any) =>
+      apiClient.put<ApiResponse>(`/subclasses/${subclassId}/options/${optionId}`, data),
+
+    delete: (subclassId: number, optionId: number) =>
+      apiClient.delete<ApiResponse>(`/subclasses/${subclassId}/options/${optionId}`),
+  },
+
   // Universidades
   universities: {
     getAll: () =>

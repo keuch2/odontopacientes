@@ -21,6 +21,14 @@ interface Assignment {
       name: string
       estimated_sessions: number
     }
+    treatment_subclass?: {
+      id: number
+      name: string
+    } | null
+    treatment_subclass_option?: {
+      id: number
+      name: string
+    } | null
     chair: {
       id: number
       name: string
@@ -153,6 +161,8 @@ export default function MyPatientsScreen({ navigation }: any) {
             </AppText>
             <AppText variant="caption" color="textSecondary">
               {assignment.patient_procedure.treatment.name}
+              {assignment.patient_procedure.treatment_subclass ? ` / ${assignment.patient_procedure.treatment_subclass.name}` : ''}
+              {assignment.patient_procedure.treatment_subclass_option ? ` / ${assignment.patient_procedure.treatment_subclass_option.name}` : ''}
             </AppText>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: statusConfig.bgColor }]}>

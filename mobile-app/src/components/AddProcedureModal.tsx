@@ -10,7 +10,6 @@ import {
   Checkbox,
   RadioButton,
   Divider,
-  Switch,
 } from 'react-native-paper';
 import { Text, View, ScrollView, StyleSheet, Alert, TouchableOpacity, FlatList } from 'react-native';
 import { api } from '../lib/api';
@@ -77,7 +76,6 @@ export default function AddProcedureModal({
   const [sessionsTotal, setSessionsTotal] = useState('1');
   const [notes, setNotes] = useState('');
   const [autoAssign, setAutoAssign] = useState(false);
-  const [isAbsent, setIsAbsent] = useState(false);
   const [isRepair, setIsRepair] = useState(false);
 
   // Load chairs and treatments
@@ -133,30 +131,6 @@ export default function AddProcedureModal({
       return;
     }
 
-    if (isAbsent) {
-      setLoading(true);
-      try {
-        for (const toothFdi of selectedTeeth) {
-          await api.procedures.createForPatient(patientId, {
-            tooth_fdi: toothFdi,
-            status: 'ausente',
-            notes: notes || 'Diente ausente',
-          });
-        }
-        Alert.alert('Éxito', `${selectedTeeth.length} diente(s) marcado(s) como ausente(s)`);
-        resetForm();
-        onSuccess();
-        onDismiss();
-      } catch (error: any) {
-        console.error('Error marking absent tooth:', error);
-        const errorMessage = error.response?.data?.message || 'Ocurrió un error';
-        Alert.alert('Error', errorMessage);
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
     // Validation
     if (!selectedTreatmentId) {
       Alert.alert('Error', 'Debes seleccionar un tratamiento');
@@ -202,7 +176,6 @@ export default function AddProcedureModal({
     setSessionsTotal('1');
     setNotes('');
     setAutoAssign(false);
-    setIsAbsent(false);
     setIsRepair(false);
   };
 
@@ -226,24 +199,10 @@ export default function AddProcedureModal({
               </View>
             ) : (
               <>
-                {/* Diente Ausente Toggle */}
-                <View style={styles.absentRow}>
-                  <Text style={styles.absentLabel}>Marcar como Diente Ausente</Text>
-                  <Switch value={isAbsent} onValueChange={setIsAbsent} color="#6B7280" />
-                </View>
-
-                {isAbsent && (
-                  <View style={styles.absentInfo}>
-                    <Text style={styles.absentInfoText}>
-                      El diente será marcado como ausente en el odontograma.
-                    </Text>
-                  </View>
-                )}
-
                 {/* Dientes seleccionados */}
                 <View style={styles.selectedTeethSection}>
                   <Text style={styles.selectedTeethLabel}>
-                    {isAbsent ? 'Dientes a marcar como ausentes:' : 'Dientes seleccionados:'}
+                    Dientes seleccionados:
                   </Text>
                   <View style={styles.selectedTeethChips}>
                     {selectedTeeth.map(t => (
@@ -254,8 +213,6 @@ export default function AddProcedureModal({
                   </View>
                 </View>
 
-                {!isAbsent && (
-                <>
                 {/* Chair Selector */}
                 <View style={styles.field}>
                   <Text style={styles.fieldLabel}>Cátedra *</Text>
@@ -438,9 +395,6 @@ export default function AddProcedureModal({
                   keyboardType="numeric"
                   style={styles.input}
                 />
-                </>
-                )}
-
                 {/* Notes */}
                 <TextInput
                   label="Notas (opcional)"
@@ -465,11 +419,11 @@ export default function AddProcedureModal({
                   <Button
                     mode="contained"
                     onPress={handleSubmit}
-                    style={[styles.button, isAbsent && { backgroundColor: '#6B7280' }]}
+                    style={styles.button}
                     loading={loading}
                     disabled={loading}
                   >
-                    {isAbsent ? 'Marcar Ausente' : 'Agregar'}
+                    Agregar
                   </Button>
                 </View>
               </>

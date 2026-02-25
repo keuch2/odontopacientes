@@ -177,52 +177,64 @@ export default function OdontogramScreen() {
     setSelectedTeeth(new Set())
   }
 
-  const hasActiveProsthesis = () => {
-    const prosthesisKeywords = ['completa superior', 'completa inferior', 'completa total']
-    return procedures.some(p => {
-      if (p.status === 'finalizado' || p.status === 'cancelado') return false
-      const treatmentName = (p.treatment?.name || '').toLowerCase()
-      return prosthesisKeywords.some(kw => treatmentName.includes(kw))
-    })
-  }
-
   // Prosthesis treatment IDs (from DB)
   const PROSTHESIS_TREATMENTS = {
     upper: { id: 46, name: 'Completa Superior' },
     lower: { id: 47, name: 'Completa Inferior' },
-    total: { id: 48, name: 'Completa Total' },
   }
   const PROSTHESIS_CHAIR_ID = 6
 
-  const getTeethForProsthesis = (type: 'upper' | 'lower' | 'total'): string[] => {
-    const upper = TOOTH_NUMBERS_UPPER.flat().map(String)
-    const lower = TOOTH_NUMBERS_LOWER.flat().map(String)
-    if (type === 'upper') return upper
-    if (type === 'lower') return lower
-    return [...upper, ...lower]
-  }
-
-  const handleProsthesis = (type: 'upper' | 'lower' | 'total') => {
-    if (hasActiveProsthesis()) {
-      Alert.alert('Prótesis activa', 'Ya existe una prótesis activa. Debes finalizar o cancelar la prótesis existente antes de crear una nueva.')
-      return
-    }
+  const getActiveProsthesis = (type: 'upper' | 'lower'): PatientProcedure | undefined => {
     const treatment = PROSTHESIS_TREATMENTS[type]
-    const teeth = getTeethForProsthesis(type)
-    Alert.alert(
-      'Crear Prótesis',
-      `Esta acción creará un procedimiento de prótesis "${treatment.name}" para los dientes: ${teeth.join(', ')}.\n\n¿Quiere continuar?`,
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Sí',
-          onPress: () => createProsthesisProcedure(type),
-        },
-      ]
+    return procedures.find(p =>
+      p.treatment?.id === treatment.id &&
+      p.status !== 'finalizado' && p.status !== 'cancelado'
     )
   }
 
-  const createProsthesisProcedure = async (type: 'upper' | 'lower' | 'total') => {
+  const getTeethForProsthesis = (type: 'upper' | 'lower'): string[] => {
+    const upper = TOOTH_NUMBERS_UPPER.flat().map(String)
+    const lower = TOOTH_NUMBERS_LOWER.flat().map(String)
+    if (type === 'upper') return upper
+    return lower
+  }
+
+  const handleProsthesis = (type: 'upper' | 'lower') => {
+    const activeProsthesis = getActiveProsthesis(type)
+    const treatment = PROSTHESIS_TREATMENTS[type]
+    
+    if (activeProsthesis) {
+      // Deactivate: cancel the existing prosthesis
+      Alert.alert(
+        'Desactivar Prótesis',
+        `¿Estás seguro que deseas cancelar la prótesis "${treatment.name}"? Esta acción cancelará el procedimiento asociado.`,
+        [
+          { text: 'No', style: 'cancel' },
+          {
+            text: 'Sí, cancelar',
+            style: 'destructive',
+            onPress: () => cancelProsthesisProcedure(activeProsthesis.id),
+          },
+        ]
+      )
+    } else {
+      // Create new prosthesis
+      const teeth = getTeethForProsthesis(type)
+      Alert.alert(
+        'Crear Prótesis',
+        `Esta acción creará un procedimiento de prótesis "${treatment.name}".\n\n¿Quiere continuar?`,
+        [
+          { text: 'No', style: 'cancel' },
+          {
+            text: 'Sí',
+            onPress: () => createProsthesisProcedure(type),
+          },
+        ]
+      )
+    }
+  }
+
+  const createProsthesisProcedure = async (type: 'upper' | 'lower') => {
     const treatment = PROSTHESIS_TREATMENTS[type]
     const teeth = getTeethForProsthesis(type)
     setProsthesisLoading(true)
@@ -234,7 +246,7 @@ export default function OdontogramScreen() {
         status: 'disponible',
         notes: `Prótesis ${treatment.name} - ${teeth.length} dientes`,
       })
-      Alert.alert('Éxito', `Prótesis "${treatment.name}" creada correctamente para ${teeth.length} dientes`)
+      Alert.alert('Éxito', `Prótesis "${treatment.name}" creada correctamente`)
       loadProcedures()
     } catch (error: any) {
       console.error('Error creating prosthesis:', error)
@@ -244,13 +256,23 @@ export default function OdontogramScreen() {
     }
   }
 
+  const cancelProsthesisProcedure = async (procedureId: number) => {
+    setProsthesisLoading(true)
+    try {
+      await api.procedures.cancel(procedureId)
+      Alert.alert('Éxito', 'Prótesis cancelada correctamente')
+      loadProcedures()
+    } catch (error: any) {
+      console.error('Error cancelling prosthesis:', error)
+      Alert.alert('Error', error.response?.data?.message || 'No se pudo cancelar la prótesis')
+    } finally {
+      setProsthesisLoading(false)
+    }
+  }
+
   const handleAddProcedure = () => {
     if (selectedTeeth.size === 0) {
       Alert.alert('Seleccionar dientes', 'Debes seleccionar al menos un diente en el odontograma antes de agregar un procedimiento.')
-      return
-    }
-    if (hasActiveProsthesis()) {
-      Alert.alert('Prótesis activa', 'Existe una prótesis activa para este paciente. Debes finalizar o cancelar la prótesis antes de agregar nuevos procedimientos.')
       return
     }
     setModalVisible(true)
@@ -285,10 +307,7 @@ export default function OdontogramScreen() {
         <Text style={[styles.toothNumber, { color: status === 'ausente' ? '#9CA3AF' : status ? '#1F2937' : '#666', textDecorationLine: status === 'ausente' ? 'line-through' : 'none' }]}>
           {toothNumber}
         </Text>
-        {status === 'ausente' && (
-          <Text style={styles.absentMark}>✕</Text>
-        )}
-        {procedureCount > 0 && status !== 'ausente' && (
+        {procedureCount > 0 && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{procedureCount}</Text>
           </View>
@@ -481,9 +500,8 @@ export default function OdontogramScreen() {
         <Surface style={styles.quickSelectContainer}>
           <Text style={styles.quickSelectTitle}>Prótesis</Text>
           <View style={styles.quickSelectRow}>
-            <Button mode="outlined" onPress={() => handleProsthesis('upper')} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel} disabled={prosthesisLoading}>Completo Superior</Button>
-            <Button mode="outlined" onPress={() => handleProsthesis('lower')} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel} disabled={prosthesisLoading}>Completo Inferior</Button>
-            <Button mode="outlined" onPress={() => handleProsthesis('total')} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel} disabled={prosthesisLoading}>Completo Total</Button>
+            <Button mode={getActiveProsthesis('upper') ? 'contained' : 'outlined'} onPress={() => handleProsthesis('upper')} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel} disabled={prosthesisLoading}>Completo Superior</Button>
+            <Button mode={getActiveProsthesis('lower') ? 'contained' : 'outlined'} onPress={() => handleProsthesis('lower')} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel} disabled={prosthesisLoading}>Completo Inferior</Button>
           </View>
           {prosthesisLoading && (
             <View style={styles.selectedTeethInfo}>

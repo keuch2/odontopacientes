@@ -18,7 +18,7 @@ class PatientProcedureController extends Controller
     public function index(Patient $patient)
     {
         $procedures = $patient->patientProcedures()
-            ->with(['treatment', 'chair', 'activeAssignment.student'])
+            ->with(['treatment.subclasses', 'chair', 'activeAssignment.student', 'treatmentSubclass'])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -32,7 +32,15 @@ class PatientProcedureController extends Controller
                         'code' => $procedure->treatment->code,
                         'requires_tooth' => $procedure->treatment->requires_tooth,
                         'estimated_sessions' => $procedure->treatment->estimated_sessions,
+                        'subclasses' => $procedure->treatment->subclasses ? $procedure->treatment->subclasses->map(fn ($s) => [
+                            'id' => $s->id,
+                            'name' => $s->name,
+                        ])->values()->toArray() : [],
                     ],
+                    'treatment_subclass' => $procedure->treatmentSubclass ? [
+                        'id' => $procedure->treatmentSubclass->id,
+                        'name' => $procedure->treatmentSubclass->name,
+                    ] : null,
                     'chair' => [
                         'id' => $procedure->chair->id,
                         'name' => $procedure->chair->name,
@@ -200,10 +208,11 @@ class PatientProcedureController extends Controller
     {
         $patientProcedure->load([
             'patient',
-            'treatment',
+            'treatment.subclasses',
             'chair',
             'activeAssignment.student',
-            'createdBy'
+            'createdBy',
+            'treatmentSubclass'
         ]);
 
         return response()->json([
@@ -222,7 +231,15 @@ class PatientProcedureController extends Controller
                     'code' => $patientProcedure->treatment->code,
                     'requires_tooth' => $patientProcedure->treatment->requires_tooth,
                     'estimated_sessions' => $patientProcedure->treatment->estimated_sessions,
+                    'subclasses' => $patientProcedure->treatment->subclasses ? $patientProcedure->treatment->subclasses->map(fn ($s) => [
+                        'id' => $s->id,
+                        'name' => $s->name,
+                    ])->values()->toArray() : [],
                 ],
+                'treatment_subclass' => $patientProcedure->treatmentSubclass ? [
+                    'id' => $patientProcedure->treatmentSubclass->id,
+                    'name' => $patientProcedure->treatmentSubclass->name,
+                ] : null,
                 'chair' => [
                     'id' => $patientProcedure->chair->id,
                     'name' => $patientProcedure->chair->name,
@@ -278,6 +295,7 @@ class PatientProcedureController extends Controller
 
         $validator = Validator::make($request->all(), [
             'treatment_id' => 'sometimes|required|exists:treatments,id',
+            'treatment_subclass_id' => 'nullable|exists:treatment_subclasses,id',
             'chair_id' => 'sometimes|required|exists:chairs,id',
             'tooth_description' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
@@ -320,7 +338,7 @@ class PatientProcedureController extends Controller
         $oldData = $patientProcedure->toArray();
 
         $updateData = $request->only([
-            'treatment_id', 'chair_id', 'tooth_description', 'notes', 'status'
+            'treatment_id', 'treatment_subclass_id', 'chair_id', 'tooth_description', 'notes', 'status'
         ]);
 
         if ($request->has('priority')) {

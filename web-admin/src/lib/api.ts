@@ -1,15 +1,10 @@
 import axios from 'axios'
 
-// Configurar base URL de la API
-const getApiBaseUrl = () => {
-  const envUrl = (import.meta as any).env.VITE_API_URL
-  if (envUrl) return envUrl
-  if (typeof window !== 'undefined' && window.location.hostname === 'codexpy.com') {
-    return `${window.location.protocol}//codexpy.com/odontopacientes/api`
-  }
-  return 'http://localhost/odontopacientes/backend/public/api'
-}
-const API_BASE_URL = getApiBaseUrl()
+// Configurar base URL de la API - runtime detection
+const _host = typeof window !== 'undefined' ? window.location.hostname : ''
+const API_BASE_URL = _host === 'codexpy.com'
+  ? window.location.protocol + '//codexpy.com/odontopacientes/api'
+  : 'http://localhost/odontopacientes/backend/public/api'
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

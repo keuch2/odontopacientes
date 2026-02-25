@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native'
+import { View, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ScrollView } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { Ionicons } from '@expo/vector-icons'
 import { AppText } from '../components/ui'
@@ -289,12 +289,12 @@ export default function MyPatientsScreen({ navigation }: any) {
           </AppText>
         </View>
 
-        <View style={styles.filtersContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScroll} contentContainerStyle={styles.filtersContainer}>
           {renderFilterChip('all', 'Todos')}
           {renderFilterChip('activa', 'En Proceso')}
           {renderFilterChip('completada', 'Completadas')}
           {renderFilterChip('creados', 'Creados por mí')}
-        </View>
+        </ScrollView>
 
         <FlatList
           data={filteredItems}
@@ -329,9 +329,12 @@ const styles = StyleSheet.create({
   header: {
     paddingVertical: spacing.md,
   },
+  filtersScroll: {
+    marginBottom: spacing.md,
+    flexGrow: 0,
+  },
   filtersContainer: {
     flexDirection: 'row',
-    marginBottom: spacing.md,
     gap: spacing.xs,
   },
   filterChip: {

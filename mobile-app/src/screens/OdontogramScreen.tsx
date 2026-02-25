@@ -68,7 +68,7 @@ const PROCEDURE_STATUS_BORDER_COLORS = {
   cancelado: '#9CA3AF',
 }
 
-const PROCEDURE_STATUS_LABELS = {
+const PROCEDURE_STATUS_LABELS: Record<string, string> = {
   disponible: 'Disponible',
   proceso: 'En Proceso',
   finalizado: 'Finalizado',
@@ -76,6 +76,8 @@ const PROCEDURE_STATUS_LABELS = {
   ausente: 'Ausente',
   cancelado: 'Cancelado',
 }
+
+const LEGEND_STATUSES = ['disponible', 'proceso', 'finalizado', 'ausente']
 
 export default function OdontogramScreen() {
   const navigation = useNavigation()
@@ -154,7 +156,6 @@ export default function OdontogramScreen() {
     if (toothProcedures.some(p => p.status === 'proceso')) return 'proceso'
     if (toothProcedures.some(p => p.status === 'disponible')) return 'disponible'
     if (toothProcedures.some(p => p.status === 'finalizado')) return 'finalizado'
-    if (toothProcedures.some(p => p.status === 'contraindicado')) return 'contraindicado'
     
     return null
   }
@@ -548,7 +549,7 @@ export default function OdontogramScreen() {
         <Surface style={styles.legend}>
           <Text style={styles.legendTitle}>Leyenda de Estados:</Text>
           <View style={styles.legendItems}>
-            {Object.entries(PROCEDURE_STATUS_LABELS).map(([status, label]) => (
+            {LEGEND_STATUSES.map((status) => (
               <View key={status} style={styles.legendItem}>
                 <View
                   style={[
@@ -559,7 +560,7 @@ export default function OdontogramScreen() {
                     },
                   ]}
                 />
-                <Text style={styles.legendLabel}>{label}</Text>
+                <Text style={styles.legendLabel}>{PROCEDURE_STATUS_LABELS[status]}</Text>
               </View>
             ))}
           </View>

@@ -347,8 +347,14 @@ class ApiClient {
     list: (assignmentId: number): Promise<AxiosResponse<ApiResponse<any[]>>> =>
       this.client.get(`/assignments/${assignmentId}/photos`),
 
+    listByProcedure: (procedureId: number): Promise<AxiosResponse<ApiResponse<any[]>>> =>
+      this.client.get(`/patient-procedures/${procedureId}/photos`),
+
     uploadBase64: (assignmentId: number, data: { image: string, description?: string }): Promise<AxiosResponse<ApiResponse<any>>> =>
       this.client.post(`/assignments/${assignmentId}/photos/base64`, data),
+
+    uploadBase64ByProcedure: (procedureId: number, data: { image: string, description?: string }): Promise<AxiosResponse<ApiResponse<any>>> =>
+      this.client.post(`/patient-procedures/${procedureId}/photos/base64`, data),
 
     update: (photoId: number, data: { description?: string }): Promise<AxiosResponse<ApiResponse<any>>> =>
       this.client.put(`/procedure-photos/${photoId}`, data),

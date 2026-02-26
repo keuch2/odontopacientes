@@ -29,7 +29,7 @@ interface Patient {
   email: string
   phone: string
   birth_date: string
-  gender: 'M' | 'F' | 'O'
+  gender: 'M' | 'F'
   address: string
   city: string
   // Ficha médica
@@ -123,7 +123,7 @@ export default function PatientDetailPage() {
 
   const fullName = `${patient.first_name} ${patient.last_name}`
   const age = new Date().getFullYear() - new Date(patient.birth_date).getFullYear()
-  const genderLabel = patient.gender === 'M' ? 'Masculino' : patient.gender === 'F' ? 'Femenino' : 'Otro'
+  const genderLabel = patient.gender === 'M' ? 'Masculino' : 'Femenino'
 
   const tabs = [
     { id: 'info' as TabType, label: 'Información Personal', icon: User },

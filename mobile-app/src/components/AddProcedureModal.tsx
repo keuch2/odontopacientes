@@ -11,7 +11,9 @@ import {
   RadioButton,
   Divider,
 } from 'react-native-paper';
-import { Text, View, ScrollView, StyleSheet, Alert, TouchableOpacity, FlatList } from 'react-native';
+import { Text, View, ScrollView, StyleSheet, Alert, TouchableOpacity, FlatList, Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '../lib/api';
 
 interface Chair {
@@ -85,6 +87,8 @@ export default function AddProcedureModal({
   const [notes, setNotes] = useState('');
   const [autoAssign, setAutoAssign] = useState(false);
   const [isRepair, setIsRepair] = useState(false);
+  const [pendingPhotos, setPendingPhotos] = useState<{ uri: string; base64: string }[]>([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
   // Load chairs and treatments
   useEffect(() => {
@@ -153,8 +157,9 @@ export default function AddProcedureModal({
 
     setLoading(true);
     try {
+      const createdProcedureIds: number[] = [];
       for (const toothFdi of selectedTeeth) {
-        await api.procedures.createForPatient(patientId, {
+        const res = await api.procedures.createForPatient(patientId, {
           treatment_id: selectedTreatmentId,
           treatment_subclass_id: selectedSubclassId || null,
           treatment_subclass_option_id: selectedOptionId || null,
@@ -167,6 +172,26 @@ export default function AddProcedureModal({
           notes: notes || null,
           auto_assign: autoAssign,
         });
+        if (res.data?.data?.id) {
+          createdProcedureIds.push(res.data.data.id);
+        }
+      }
+
+      // Upload pending photos to each created procedure
+      if (pendingPhotos.length > 0 && createdProcedureIds.length > 0) {
+        setUploadingPhotos(true);
+        for (const procId of createdProcedureIds) {
+          for (const photo of pendingPhotos) {
+            try {
+              await api.procedurePhotos.uploadBase64ByProcedure(procId, {
+                image: `data:image/jpeg;base64,${photo.base64}`,
+              });
+            } catch (photoErr) {
+              console.error('Error uploading photo to procedure:', photoErr);
+            }
+          }
+        }
+        setUploadingPhotos(false);
       }
 
       Alert.alert('Éxito', `Procedimiento agregado a ${selectedTeeth.length} diente(s)`);
@@ -193,6 +218,58 @@ export default function AddProcedureModal({
     setNotes('');
     setAutoAssign(false);
     setIsRepair(false);
+    setPendingPhotos([]);
+    setUploadingPhotos(false);
+  };
+
+  const showPhotoOptions = () => {
+    Alert.alert(
+      'Agregar Foto',
+      'Selecciona una opción',
+      [
+        { text: 'Cámara', onPress: () => pickPhoto('camera') },
+        { text: 'Galería', onPress: () => pickPhoto('gallery') },
+        { text: 'Cancelar', style: 'cancel' },
+      ]
+    );
+  };
+
+  const pickPhoto = async (source: 'camera' | 'gallery') => {
+    if (source === 'camera') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permiso denegado', 'Necesitamos acceso a la cámara');
+        return;
+      }
+    } else {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permiso denegado', 'Necesitamos acceso a la galería');
+        return;
+      }
+    }
+
+    const pickerFn = source === 'camera'
+      ? ImagePicker.launchCameraAsync
+      : ImagePicker.launchImageLibraryAsync;
+
+    const result = await pickerFn({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0]?.base64) {
+      setPendingPhotos(prev => [...prev, {
+        uri: result.assets[0].uri,
+        base64: result.assets[0].base64!,
+      }]);
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setPendingPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleDismiss = () => {
@@ -453,6 +530,31 @@ export default function AddProcedureModal({
                   style={styles.input}
                 />
 
+                {/* Photos */}
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>Fotos iniciales (opcional)</Text>
+                  <View style={styles.photosPreviewRow}>
+                    {pendingPhotos.map((photo, idx) => (
+                      <View key={idx} style={styles.photoPreviewContainer}>
+                        <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
+                        <TouchableOpacity style={styles.photoRemoveBtn} onPress={() => removePhoto(idx)}>
+                          <Ionicons name="close-circle" size={22} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                    <TouchableOpacity style={styles.addPhotoBtn} onPress={showPhotoOptions}>
+                      <Ionicons name="camera-outline" size={28} color="#6B7280" />
+                      <Text style={styles.addPhotoBtnText}>Agregar</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {uploadingPhotos && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                      <ActivityIndicator size="small" />
+                      <Text style={{ marginLeft: 8, fontSize: 13, color: '#6B7280' }}>Subiendo fotos...</Text>
+                    </View>
+                  )}
+                </View>
+
                 {/* Buttons */}
                 <View style={styles.buttons}>
                   <Button
@@ -467,8 +569,8 @@ export default function AddProcedureModal({
                     mode="contained"
                     onPress={handleSubmit}
                     style={styles.button}
-                    loading={loading}
-                    disabled={loading}
+                    loading={loading || uploadingPhotos}
+                    disabled={loading || uploadingPhotos}
                   >
                     Agregar
                   </Button>
@@ -608,6 +710,45 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
+  },
+  photosPreviewRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    alignItems: 'center',
+  },
+  photoPreviewContainer: {
+    position: 'relative',
+  },
+  photoPreview: {
+    width: 70,
+    height: 70,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  photoRemoveBtn: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: 'white',
+    borderRadius: 11,
+  },
+  addPhotoBtn: {
+    width: 70,
+    height: 70,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  addPhotoBtnText: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
   },
   checkboxRow: {
     flexDirection: 'row',

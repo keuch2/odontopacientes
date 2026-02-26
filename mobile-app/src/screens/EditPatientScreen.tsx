@@ -281,7 +281,6 @@ export default function EditPatientScreen() {
             buttons={[
               { value: 'M', label: 'Masculino' },
               { value: 'F', label: 'Femenino' },
-              { value: 'O', label: 'Otro' },
             ]}
             style={styles.segmentedButtons}
           />

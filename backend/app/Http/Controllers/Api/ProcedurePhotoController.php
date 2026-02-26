@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Assignment;
+use App\Models\PatientProcedure;
 use App\Models\ProcedurePhoto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -325,8 +326,8 @@ class ProcedurePhotoController extends Controller
             return response()->json(['message' => 'Usuario no autenticado'], 401);
         }
 
-        // Verificar permisos
-        if ($procedurePhoto->assignment->student_id != $user['id']) {
+        // Verificar permisos: dueño de asignación o creador de la foto
+        if (!$this->canManagePhoto($procedurePhoto, $user)) {
             return response()->json([
                 'message' => 'No tienes permiso para editar esta foto'
             ], 403);
@@ -356,8 +357,8 @@ class ProcedurePhotoController extends Controller
             return response()->json(['message' => 'Usuario no autenticado'], 401);
         }
 
-        // Verificar permisos
-        if ($procedurePhoto->assignment->student_id != $user['id']) {
+        // Verificar permisos: dueño de asignación o creador de la foto
+        if (!$this->canManagePhoto($procedurePhoto, $user)) {
             return response()->json([
                 'message' => 'No tienes permiso para eliminar esta foto'
             ], 403);
@@ -369,5 +370,167 @@ class ProcedurePhotoController extends Controller
         return response()->json([
             'message' => 'Foto eliminada exitosamente'
         ]);
+    }
+
+    /**
+     * Listar fotos de un procedimiento (sin assignment)
+     */
+    public function indexByProcedure(PatientProcedure $patientProcedure)
+    {
+        // Fotos directas del procedimiento + fotos de sus asignaciones
+        $photos = ProcedurePhoto::where('patient_procedure_id', $patientProcedure->id)
+            ->orWhereHas('assignment', function ($q) use ($patientProcedure) {
+                $q->where('patient_procedure_id', $patientProcedure->id);
+            })
+            ->with('createdBy')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'data' => $photos->map(function ($photo) {
+                return [
+                    'id' => $photo->id,
+                    'url' => $photo->full_url,
+                    'file_name' => $photo->file_name,
+                    'mime_type' => $photo->mime_type,
+                    'size' => $photo->size,
+                    'formatted_size' => $photo->formatted_size,
+                    'description' => $photo->description,
+                    'taken_at' => $photo->taken_at,
+                    'created_by' => [
+                        'id' => $photo->createdBy->id,
+                        'name' => $photo->createdBy->name,
+                    ],
+                    'created_at' => $photo->created_at,
+                ];
+            })
+        ]);
+    }
+
+    /**
+     * Subir foto en base64 directamente a un procedimiento (sin assignment)
+     */
+    public function storeBase64ByProcedure(Request $request, PatientProcedure $patientProcedure)
+    {
+        $validator = Validator::make($request->all(), [
+            'image' => 'required|string',
+            'description' => 'nullable|string|max:500',
+            'taken_at' => 'nullable|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Datos de entrada inválidos',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = $request->attributes->get('demo_user');
+        if (!$user) {
+            return response()->json(['message' => 'Usuario no autenticado'], 401);
+        }
+
+        // Permitir si: es el creador del procedimiento, o tiene asignación activa
+        if (!$this->canUploadToProcedure($patientProcedure, $user)) {
+            return response()->json([
+                'message' => 'No tienes permiso para subir fotos a este procedimiento'
+            ], 403);
+        }
+
+        try {
+            $imageData = $request->input('image');
+
+            if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $matches)) {
+                $imageData = substr($imageData, strpos($imageData, ',') + 1);
+            }
+
+            $imageData = base64_decode($imageData);
+
+            if ($imageData === false) {
+                return response()->json(['message' => 'Imagen inválida'], 400);
+            }
+
+            $processedImage = $this->processImageFromString($imageData);
+
+            $fileName = Str::uuid() . '.jpg';
+
+            $directory = 'procedures/proc_' . $patientProcedure->id;
+            Storage::disk('public')->makeDirectory($directory);
+
+            $path = $directory . '/' . $fileName;
+            Storage::disk('public')->put($path, $processedImage['data']);
+
+            $photo = ProcedurePhoto::create([
+                'patient_procedure_id' => $patientProcedure->id,
+                'assignment_id' => null,
+                'file_path' => $path,
+                'file_name' => 'photo_' . time() . '.jpg',
+                'mime_type' => 'image/jpeg',
+                'size' => $processedImage['size'],
+                'description' => $request->description,
+                'taken_at' => $request->taken_at ?? now(),
+                'created_by' => $user['id'],
+            ]);
+
+            return response()->json([
+                'message' => 'Foto subida exitosamente',
+                'data' => [
+                    'id' => $photo->id,
+                    'url' => $photo->full_url,
+                    'file_name' => $photo->file_name,
+                    'size' => $photo->size,
+                    'formatted_size' => $photo->formatted_size,
+                    'description' => $photo->description,
+                    'created_at' => $photo->created_at,
+                ]
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al subir la foto',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Verificar si el usuario puede gestionar una foto (editar/eliminar)
+     */
+    private function canManagePhoto(ProcedurePhoto $photo, array $user): bool
+    {
+        // El creador de la foto siempre puede gestionarla
+        if ($photo->created_by == $user['id']) {
+            return true;
+        }
+
+        // Si la foto pertenece a una asignación, el dueño de la asignación puede
+        if ($photo->assignment_id && $photo->assignment && $photo->assignment->student_id == $user['id']) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Verificar si el usuario puede subir fotos a un procedimiento
+     */
+    private function canUploadToProcedure(PatientProcedure $procedure, array $user): bool
+    {
+        // Creador del procedimiento
+        if ($procedure->created_by == $user['id']) {
+            return true;
+        }
+
+        // Estudiante con asignación activa
+        $activeAssignment = $procedure->assignments()
+            ->where('student_id', $user['id'])
+            ->where('status', 'activa')
+            ->first();
+
+        if ($activeAssignment) {
+            return true;
+        }
+
+        return false;
     }
 }

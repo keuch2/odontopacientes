@@ -29,7 +29,6 @@ interface SubclassOption {
 interface Subclass {
   id: number;
   name: string;
-  options?: SubclassOption[];
 }
 
 interface Treatment {
@@ -37,6 +36,7 @@ interface Treatment {
   name: string;
   chair_id: number;
   subclasses?: Subclass[];
+  options?: SubclassOption[];
 }
 
 interface AddProcedureModalProps {
@@ -120,10 +120,7 @@ export default function AddProcedureModal({
     ? filteredTreatments.find(t => t.id === selectedTreatmentId)
     : null;
   const availableSubclasses = selectedTreatment?.subclasses || [];
-  const selectedSubclass = selectedSubclassId
-    ? availableSubclasses.find(s => s.id === selectedSubclassId)
-    : null;
-  const availableOptions = selectedSubclass?.options || [];
+  const availableOptions = selectedTreatment?.options || [];
 
   const loadData = async () => {
     setLoadingData(true);
@@ -406,7 +403,7 @@ export default function AddProcedureModal({
                 {/* Subclass Option Selector */}
                 {availableOptions.length > 0 && (
                   <View style={styles.field}>
-                    <Text style={styles.fieldLabel}>Sub-clase adicional</Text>
+                    <Text style={styles.fieldLabel}>Sub-sub-clase</Text>
                     <TouchableOpacity
                       style={[styles.dropdownButton, !!selectedOptionId && styles.dropdownButtonSelected]}
                       onPress={() => { setOptionMenuVisible(!optionMenuVisible); setChairMenuVisible(false); setTreatmentMenuVisible(false); setSubclassMenuVisible(false); }}

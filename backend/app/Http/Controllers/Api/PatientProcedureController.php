@@ -215,6 +215,7 @@ class PatientProcedureController extends Controller
         $patientProcedure->load([
             'patient',
             'treatment.subclasses',
+            'treatment.subclassOptions',
             'chair',
             'activeAssignment.student',
             'createdBy',
@@ -241,6 +242,10 @@ class PatientProcedureController extends Controller
                     'subclasses' => $patientProcedure->treatment->subclasses ? $patientProcedure->treatment->subclasses->map(fn ($s) => [
                         'id' => $s->id,
                         'name' => $s->name,
+                    ])->values()->toArray() : [],
+                    'options' => $patientProcedure->treatment->subclassOptions ? $patientProcedure->treatment->subclassOptions->map(fn ($o) => [
+                        'id' => $o->id,
+                        'name' => $o->name,
                     ])->values()->toArray() : [],
                 ],
                 'treatment_subclass' => $patientProcedure->treatmentSubclass ? [

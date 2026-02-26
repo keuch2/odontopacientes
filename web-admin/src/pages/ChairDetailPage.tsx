@@ -46,8 +46,7 @@ export default function ChairDetailPage() {
   const [subclassInput, setSubclassInput] = useState<Record<number, string>>({})
   const [editingSubclass, setEditingSubclass] = useState<{ treatmentId: number; subclassId: number; name: string } | null>(null)
   const [optionInput, setOptionInput] = useState<Record<number, string>>({})
-  const [editingOption, setEditingOption] = useState<{ subclassId: number; optionId: number; name: string } | null>(null)
-  const [expandedSubclass, setExpandedSubclass] = useState<number | null>(null)
+  const [editingOption, setEditingOption] = useState<{ treatmentId: number; optionId: number; name: string } | null>(null)
 
   const { data: chairData, isLoading: chairLoading } = useQuery({
     queryKey: ['chair', id],
@@ -108,8 +107,8 @@ export default function ChairDetailPage() {
   })
 
   const createOptionMutation = useMutation({
-    mutationFn: ({ subclassId, name }: { subclassId: number; name: string }) =>
-      api.subclassOptions.create(subclassId, { name }),
+    mutationFn: ({ treatmentId, name }: { treatmentId: number; name: string }) =>
+      api.subclassOptions.create(treatmentId, { name }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chair', id] })
       setOptionInput({})
@@ -117,8 +116,8 @@ export default function ChairDetailPage() {
   })
 
   const updateOptionMutation = useMutation({
-    mutationFn: ({ subclassId, optionId, name }: { subclassId: number; optionId: number; name: string }) =>
-      api.subclassOptions.update(subclassId, optionId, { name }),
+    mutationFn: ({ treatmentId, optionId, name }: { treatmentId: number; optionId: number; name: string }) =>
+      api.subclassOptions.update(treatmentId, optionId, { name }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chair', id] })
       setEditingOption(null)
@@ -126,8 +125,8 @@ export default function ChairDetailPage() {
   })
 
   const deleteOptionMutation = useMutation({
-    mutationFn: ({ subclassId, optionId }: { subclassId: number; optionId: number }) =>
-      api.subclassOptions.delete(subclassId, optionId),
+    mutationFn: ({ treatmentId, optionId }: { treatmentId: number; optionId: number }) =>
+      api.subclassOptions.delete(treatmentId, optionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chair', id] })
     },
@@ -374,16 +373,7 @@ export default function ChairDetailPage() {
                                 </form>
                               ) : (
                                 <>
-                                  <button
-                                    className="text-gray-700 hover:text-blue-600 flex items-center gap-1 cursor-pointer"
-                                    onClick={() => setExpandedSubclass(expandedSubclass === sc.id ? null : sc.id)}
-                                  >
-                                    <span>{sc.name}</span>
-                                    {sc.options && sc.options.length > 0 && (
-                                      <span className="text-xs text-gray-400">({sc.options.length})</span>
-                                    )}
-                                    <span className="text-xs text-gray-400">{expandedSubclass === sc.id ? '▲' : '▼'}</span>
-                                  </button>
+                                  <span className="text-gray-700">{sc.name}</span>
                                   <div className="flex gap-1">
                                     <button
                                       onClick={() => setEditingSubclass({ treatmentId: treatment.id, subclassId: sc.id, name: sc.name })}
@@ -401,84 +391,6 @@ export default function ChairDetailPage() {
                                 </>
                               )}
                             </div>
-                            {/* Subclass Options */}
-                            {expandedSubclass === sc.id && (
-                              <div className="mt-1 ml-3 pl-2 border-l-2 border-blue-200 space-y-1">
-                                {sc.options && sc.options.length > 0 && sc.options.map((opt: any) => (
-                                  <div key={opt.id} className="flex items-center justify-between bg-white rounded px-2 py-0.5 text-xs">
-                                    {editingOption?.optionId === opt.id ? (
-                                      <form
-                                        className="flex items-center gap-1 flex-1"
-                                        onSubmit={(e) => {
-                                          e.preventDefault()
-                                          if (editingOption!.name.trim()) {
-                                            updateOptionMutation.mutate({
-                                              subclassId: sc.id,
-                                              optionId: opt.id,
-                                              name: editingOption!.name.trim(),
-                                            })
-                                          }
-                                        }}
-                                      >
-                                        <input
-                                          type="text"
-                                          value={editingOption!.name}
-                                          onChange={(e) => setEditingOption({ subclassId: editingOption!.subclassId, optionId: editingOption!.optionId, name: e.target.value })}
-                                          className="flex-1 border border-gray-300 rounded px-1.5 py-0.5 text-xs focus:ring-1 focus:ring-blue-500"
-                                          autoFocus
-                                        />
-                                        <button type="submit" className="text-green-600 hover:text-green-700 text-xs font-medium">OK</button>
-                                        <button type="button" onClick={() => setEditingOption(null)} className="text-gray-400 hover:text-gray-600 text-xs">✕</button>
-                                      </form>
-                                    ) : (
-                                      <>
-                                        <span className="text-gray-600">{opt.name}</span>
-                                        <div className="flex gap-1">
-                                          <button
-                                            onClick={() => setEditingOption({ subclassId: sc.id, optionId: opt.id, name: opt.name })}
-                                            className="text-gray-400 hover:text-blue-600"
-                                          >
-                                            <Edit2 className="h-2.5 w-2.5" />
-                                          </button>
-                                          <button
-                                            onClick={() => deleteOptionMutation.mutate({ subclassId: sc.id, optionId: opt.id })}
-                                            className="text-gray-400 hover:text-red-600"
-                                          >
-                                            <Trash2 className="h-2.5 w-2.5" />
-                                          </button>
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
-                                ))}
-                                <form
-                                  className="flex items-center gap-1"
-                                  onSubmit={(e) => {
-                                    e.preventDefault()
-                                    const name = (optionInput[sc.id] || '').trim()
-                                    if (name) {
-                                      createOptionMutation.mutate({ subclassId: sc.id, name })
-                                    }
-                                  }}
-                                >
-                                  <input
-                                    type="text"
-                                    value={optionInput[sc.id] || ''}
-                                    onChange={(e) => setOptionInput({ ...optionInput, [sc.id]: e.target.value })}
-                                    className="flex-1 border border-gray-300 rounded px-1.5 py-0.5 text-xs focus:ring-1 focus:ring-blue-500"
-                                    placeholder="Nueva opción..."
-                                    maxLength={255}
-                                  />
-                                  <button
-                                    type="submit"
-                                    className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-1.5 py-0.5 rounded font-medium"
-                                    disabled={createOptionMutation.isPending}
-                                  >
-                                    {createOptionMutation.isPending ? '...' : '+'}
-                                  </button>
-                                </form>
-                              </div>
-                            )}
                           </div>
                         ))}
                       </div>
@@ -508,6 +420,94 @@ export default function ChairDetailPage() {
                           disabled={createSubclassMutation.isPending}
                         >
                           {createSubclassMutation.isPending ? '...' : '+ Agregar'}
+                        </button>
+                      </form>
+                    )}
+                  </div>
+
+                  {/* Sub-sub-clases (options at treatment level) */}
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-gray-500 flex items-center gap-1">
+                        <Tag className="h-3 w-3" /> Sub-sub-clases ({treatment.options?.length || 0}/10)
+                      </p>
+                    </div>
+                    {treatment.options && treatment.options.length > 0 && (
+                      <div className="space-y-1 mb-2">
+                        {treatment.options.map((opt: any) => (
+                          <div key={opt.id} className="flex items-center justify-between bg-purple-50 rounded px-2 py-1 text-sm">
+                            {editingOption?.optionId === opt.id ? (
+                              <form
+                                className="flex items-center gap-1 flex-1"
+                                onSubmit={(e) => {
+                                  e.preventDefault()
+                                  if (editingOption!.name.trim()) {
+                                    updateOptionMutation.mutate({
+                                      treatmentId: treatment.id,
+                                      optionId: opt.id,
+                                      name: editingOption!.name.trim(),
+                                    })
+                                  }
+                                }}
+                              >
+                                <input
+                                  type="text"
+                                  value={editingOption!.name}
+                                  onChange={(e) => setEditingOption({ treatmentId: editingOption!.treatmentId, optionId: editingOption!.optionId, name: e.target.value })}
+                                  className="flex-1 border border-gray-300 rounded px-2 py-0.5 text-xs focus:ring-1 focus:ring-purple-500"
+                                  autoFocus
+                                />
+                                <button type="submit" className="text-green-600 hover:text-green-700 text-xs font-medium">OK</button>
+                                <button type="button" onClick={() => setEditingOption(null)} className="text-gray-400 hover:text-gray-600 text-xs">Cancelar</button>
+                              </form>
+                            ) : (
+                              <>
+                                <span className="text-gray-700">{opt.name}</span>
+                                <div className="flex gap-1">
+                                  <button
+                                    onClick={() => setEditingOption({ treatmentId: treatment.id, optionId: opt.id, name: opt.name })}
+                                    className="text-gray-400 hover:text-blue-600"
+                                  >
+                                    <Edit2 className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => deleteOptionMutation.mutate({ treatmentId: treatment.id, optionId: opt.id })}
+                                    className="text-gray-400 hover:text-red-600"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {(!treatment.options || treatment.options.length < 10) && (
+                      <form
+                        className="flex items-center gap-1"
+                        onSubmit={(e) => {
+                          e.preventDefault()
+                          const name = (optionInput[treatment.id] || '').trim()
+                          if (name) {
+                            createOptionMutation.mutate({ treatmentId: treatment.id, name })
+                          }
+                        }}
+                      >
+                        <input
+                          type="text"
+                          value={optionInput[treatment.id] || ''}
+                          onChange={(e) => setOptionInput({ ...optionInput, [treatment.id]: e.target.value })}
+                          className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-purple-500"
+                          placeholder="Nueva sub-sub-clase..."
+                          maxLength={255}
+                        />
+                        <button
+                          type="submit"
+                          className="text-xs bg-purple-50 text-purple-600 hover:bg-purple-100 px-2 py-1 rounded font-medium"
+                          disabled={createOptionMutation.isPending}
+                        >
+                          {createOptionMutation.isPending ? '...' : '+ Agregar'}
                         </button>
                       </form>
                     )}

@@ -12,7 +12,7 @@ interface PatientFormData {
   email: string
   phone: string
   birthdate: string
-  gender: 'M' | 'F' | 'Other'
+  gender: 'M' | 'F'
   address: string
   city: string
   // Ficha médica
@@ -242,7 +242,6 @@ export default function PatientFormModal({ isOpen, onClose, patient }: PatientFo
                   >
                     <option value="M">Masculino</option>
                     <option value="F">Femenino</option>
-                    <option value="Other">Otro</option>
                   </select>
                   {errors.gender && (
                     <p className="mt-1 text-sm text-red-600">{errors.gender.message}</p>

@@ -68,18 +68,20 @@ export default function ProcedureViewScreen() {
   }, [procedureId])
 
   useEffect(() => {
-    if (procedure?.assignment?.id) {
+    if (procedure) {
       fetchPhotos()
-      fetchSessions()
+      if (procedure?.assignment?.id) {
+        fetchSessions()
+      }
     }
-  }, [procedure?.assignment?.id])
+  }, [procedure?.id, procedure?.assignment?.id])
 
   const fetchPhotos = async () => {
-    if (!procedure?.assignment?.id) return
+    if (!procedure?.id) return
     
     try {
       setPhotosLoading(true)
-      const response = await api.procedurePhotos.list(procedure.assignment.id)
+      const response = await api.procedurePhotos.listByProcedure(procedure.id)
       setPhotos(response.data.data || [])
     } catch (error: any) {
       console.error('Error loading photos:', error)
@@ -94,19 +96,50 @@ export default function ProcedureViewScreen() {
     return studentId != null && userId != null && studentId === userId
   }
 
+  const isUserCreator = () => {
+    const createdById = typeof procedure?.created_by === 'object' 
+      ? procedure?.created_by?.id 
+      : procedure?.created_by
+    return createdById != null && createdById === user?.id
+  }
+
   const canEditPhotos = () => {
+    if (isUserCreator()) return true
     return isUserAssigned() && (procedure?.status === 'proceso' || procedure?.status === 'finalizado')
   }
 
-  const pickAndUploadImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    
-    if (status !== 'granted') {
-      Alert.alert('Permiso denegado', 'Necesitamos acceso a tu galería para subir fotos')
-      return
+  const showPhotoOptions = () => {
+    Alert.alert(
+      'Agregar Foto',
+      'Selecciona una opción',
+      [
+        { text: 'Cámara', onPress: () => captureAndUploadImage('camera') },
+        { text: 'Galería', onPress: () => captureAndUploadImage('gallery') },
+        { text: 'Cancelar', style: 'cancel' },
+      ]
+    )
+  }
+
+  const captureAndUploadImage = async (source: 'camera' | 'gallery') => {
+    if (source === 'camera') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync()
+      if (status !== 'granted') {
+        Alert.alert('Permiso denegado', 'Necesitamos acceso a la cámara para tomar fotos')
+        return
+      }
+    } else {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      if (status !== 'granted') {
+        Alert.alert('Permiso denegado', 'Necesitamos acceso a tu galería para subir fotos')
+        return
+      }
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
+    const pickerFn = source === 'camera' 
+      ? ImagePicker.launchCameraAsync 
+      : ImagePicker.launchImageLibraryAsync
+
+    const result = await pickerFn({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 0.8,
@@ -117,9 +150,11 @@ export default function ProcedureViewScreen() {
       setUploadingPhoto(true)
       try {
         const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`
-        await api.procedurePhotos.uploadBase64(procedure.assignment.id, {
-          image: base64Image,
-        })
+        if (procedure?.assignment?.id && isUserAssigned()) {
+          await api.procedurePhotos.uploadBase64(procedure.assignment.id, { image: base64Image })
+        } else {
+          await api.procedurePhotos.uploadBase64ByProcedure(procedure.id, { image: base64Image })
+        }
         Alert.alert('Éxito', 'Foto subida correctamente')
         fetchPhotos()
       } catch (error: any) {
@@ -725,7 +760,7 @@ export default function ProcedureViewScreen() {
             {canEditPhotos() && (
               <TouchableOpacity 
                 style={styles.addPhotoButton}
-                onPress={pickAndUploadImage}
+                onPress={showPhotoOptions}
                 disabled={uploadingPhoto}
               >
                 {uploadingPhoto ? (

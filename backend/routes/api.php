@@ -279,6 +279,10 @@ Route::middleware('demo.auth')->group(function () {
     Route::post('/assignments/{assignment}/photos/base64', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'storeBase64']);
     Route::put('/procedure-photos/{procedurePhoto}', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'update']);
     Route::delete('/procedure-photos/{procedurePhoto}', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'destroy']);
+
+    // Procedure Photos (by procedure ID, without assignment)
+    Route::get('/patient-procedures/{patientProcedure}/photos', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'indexByProcedure']);
+    Route::post('/patient-procedures/{patientProcedure}/photos/base64', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'storeBase64ByProcedure']);
     
     // Endpoint de usuarios - devuelve usuarios de la base de datos
     Route::get('/users', function () {

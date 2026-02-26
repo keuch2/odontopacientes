@@ -13,6 +13,7 @@ class ProcedurePhoto extends Model
 
     protected $fillable = [
         'assignment_id',
+        'patient_procedure_id',
         'file_path',
         'file_name',
         'mime_type',
@@ -34,6 +35,14 @@ class ProcedurePhoto extends Model
     public function assignment(): BelongsTo
     {
         return $this->belongsTo(Assignment::class);
+    }
+
+    /**
+     * Procedimiento al que pertenece esta foto (directo, sin assignment)
+     */
+    public function patientProcedure(): BelongsTo
+    {
+        return $this->belongsTo(PatientProcedure::class);
     }
 
     /**

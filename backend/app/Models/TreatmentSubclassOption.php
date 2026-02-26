@@ -12,7 +12,7 @@ class TreatmentSubclassOption extends Model
     use HasFactory;
 
     protected $fillable = [
-        'treatment_subclass_id',
+        'treatment_id',
         'name',
         'sort_order',
         'active',
@@ -23,9 +23,9 @@ class TreatmentSubclassOption extends Model
         'active' => 'boolean',
     ];
 
-    public function subclass(): BelongsTo
+    public function treatment(): BelongsTo
     {
-        return $this->belongsTo(TreatmentSubclass::class, 'treatment_subclass_id');
+        return $this->belongsTo(Treatment::class);
     }
 
     public function patientProcedures(): HasMany

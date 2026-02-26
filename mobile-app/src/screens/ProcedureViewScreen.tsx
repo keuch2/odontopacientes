@@ -598,7 +598,7 @@ export default function ProcedureViewScreen() {
               )}
               {procedure.treatment_subclass_option && (
                 <AppText color="textMuted" style={styles.procedureMeta}>
-                  Sub-clase adicional: {procedure.treatment_subclass_option.name}
+                  Sub-sub-clase: {procedure.treatment_subclass_option.name}
                 </AppText>
               )}
             </View>
@@ -979,7 +979,7 @@ export default function ProcedureViewScreen() {
                           styles.editTreatmentItem,
                           editSubclassId === sc.id && styles.editTreatmentItemActive,
                         ]}
-                        onPress={() => { setEditSubclassId(editSubclassId === sc.id ? null : sc.id); setEditOptionId(null); }}
+                        onPress={() => { setEditSubclassId(editSubclassId === sc.id ? null : sc.id); }}
                       >
                         <AppText
                           color={editSubclassId === sc.id ? 'white' : 'brandNavy'}
@@ -994,15 +994,14 @@ export default function ProcedureViewScreen() {
                 </>
               )}
 
-              {/* Subclass Option Selector */}
-              {editSubclassId && (() => {
+              {/* Subclass Option Selector (treatment-level) */}
+              {editTreatmentId && (() => {
                 const selectedTreatment = treatments.find((t: any) => t.id === editTreatmentId)
-                const selectedSubclass = selectedTreatment?.subclasses?.find((s: any) => s.id === editSubclassId)
-                const options = selectedSubclass?.options || []
+                const options = selectedTreatment?.options || []
                 if (options.length === 0) return null
                 return (
                   <>
-                    <AppText color="brandNavy" weight="semibold" style={{ marginBottom: 8 }}>Sub-clase adicional</AppText>
+                    <AppText color="brandNavy" weight="semibold" style={{ marginBottom: 8 }}>Sub-sub-clase</AppText>
                     <View style={{ marginBottom: spacing.md }}>
                       {options.map((opt: any) => (
                         <TouchableOpacity

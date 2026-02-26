@@ -14,10 +14,9 @@ class TreatmentController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Treatment::with(['chair', 'subclasses' => function ($q) {
-            $q->where('active', true)->orderBy('sort_order')->orderBy('name')
-              ->with(['options' => function ($oq) {
-                  $oq->where('active', true)->orderBy('sort_order')->orderBy('name');
-              }]);
+            $q->where('active', true)->orderBy('sort_order')->orderBy('name');
+        }, 'subclassOptions' => function ($q) {
+            $q->where('active', true)->orderBy('sort_order')->orderBy('name');
         }]);
 
         if ($request->has('chair_id')) {
@@ -34,7 +33,7 @@ class TreatmentController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $treatment = Treatment::with(['chair', 'subclasses'])->findOrFail($id);
+        $treatment = Treatment::with(['chair', 'subclasses', 'subclassOptions'])->findOrFail($id);
 
         return response()->json([
             'success' => true,
@@ -120,7 +119,6 @@ class TreatmentController extends Controller
     {
         $treatment = Treatment::findOrFail($treatmentId);
         $subclasses = $treatment->subclasses()
-            ->with(['options' => fn ($q) => $q->orderBy('sort_order')->orderBy('name')])
             ->orderBy('sort_order')->orderBy('name')->get();
 
         return response()->json([
@@ -131,12 +129,6 @@ class TreatmentController extends Controller
                 'name' => $s->name,
                 'sort_order' => $s->sort_order,
                 'active' => (bool) $s->active,
-                'options' => $s->options->map(fn ($o) => [
-                    'id' => $o->id,
-                    'name' => $o->name,
-                    'sort_order' => $o->sort_order,
-                    'active' => (bool) $o->active,
-                ])->values()->toArray(),
             ]),
         ]);
     }
@@ -215,18 +207,18 @@ class TreatmentController extends Controller
         return response()->json(['message' => 'Sub-clase eliminada correctamente']);
     }
 
-    // ---- Subclass Option CRUD ----
+    // ---- Subclass Option CRUD (at treatment level) ----
 
-    public function optionIndex(int $subclassId): JsonResponse
+    public function optionIndex(int $treatmentId): JsonResponse
     {
-        $subclass = TreatmentSubclass::findOrFail($subclassId);
-        $options = $subclass->options()->orderBy('sort_order')->orderBy('name')->get();
+        $treatment = Treatment::findOrFail($treatmentId);
+        $options = $treatment->subclassOptions()->orderBy('sort_order')->orderBy('name')->get();
 
         return response()->json([
             'success' => true,
             'data' => $options->map(fn ($o) => [
                 'id' => $o->id,
-                'treatment_subclass_id' => $o->treatment_subclass_id,
+                'treatment_id' => $o->treatment_id,
                 'name' => $o->name,
                 'sort_order' => $o->sort_order,
                 'active' => (bool) $o->active,
@@ -234,13 +226,13 @@ class TreatmentController extends Controller
         ]);
     }
 
-    public function optionStore(Request $request, int $subclassId): JsonResponse
+    public function optionStore(Request $request, int $treatmentId): JsonResponse
     {
-        $subclass = TreatmentSubclass::findOrFail($subclassId);
+        $treatment = Treatment::findOrFail($treatmentId);
 
-        if ($subclass->options()->count() >= 10) {
+        if ($treatment->subclassOptions()->count() >= 10) {
             return response()->json([
-                'message' => 'Una sub-clase puede tener un maximo de 10 opciones',
+                'message' => 'Un tratamiento puede tener un maximo de 10 opciones',
             ], 422);
         }
 
@@ -250,7 +242,7 @@ class TreatmentController extends Controller
             'active' => 'nullable|boolean',
         ]);
 
-        $option = $subclass->options()->create(array_merge([
+        $option = $treatment->subclassOptions()->create(array_merge([
             'sort_order' => 0,
             'active' => true,
         ], $validated));
@@ -259,7 +251,7 @@ class TreatmentController extends Controller
             'message' => 'Opcion creada correctamente',
             'data' => [
                 'id' => $option->id,
-                'treatment_subclass_id' => $option->treatment_subclass_id,
+                'treatment_id' => $option->treatment_id,
                 'name' => $option->name,
                 'sort_order' => $option->sort_order,
                 'active' => (bool) $option->active,
@@ -267,10 +259,10 @@ class TreatmentController extends Controller
         ], 201);
     }
 
-    public function optionUpdate(Request $request, int $subclassId, int $optionId): JsonResponse
+    public function optionUpdate(Request $request, int $treatmentId, int $optionId): JsonResponse
     {
-        TreatmentSubclass::findOrFail($subclassId);
-        $option = TreatmentSubclassOption::where('treatment_subclass_id', $subclassId)->findOrFail($optionId);
+        Treatment::findOrFail($treatmentId);
+        $option = TreatmentSubclassOption::where('treatment_id', $treatmentId)->findOrFail($optionId);
 
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
@@ -284,7 +276,7 @@ class TreatmentController extends Controller
             'message' => 'Opcion actualizada correctamente',
             'data' => [
                 'id' => $option->id,
-                'treatment_subclass_id' => $option->treatment_subclass_id,
+                'treatment_id' => $option->treatment_id,
                 'name' => $option->name,
                 'sort_order' => $option->sort_order,
                 'active' => (bool) $option->active,
@@ -292,10 +284,10 @@ class TreatmentController extends Controller
         ]);
     }
 
-    public function optionDestroy(int $subclassId, int $optionId): JsonResponse
+    public function optionDestroy(int $treatmentId, int $optionId): JsonResponse
     {
-        TreatmentSubclass::findOrFail($subclassId);
-        $option = TreatmentSubclassOption::where('treatment_subclass_id', $subclassId)->findOrFail($optionId);
+        Treatment::findOrFail($treatmentId);
+        $option = TreatmentSubclassOption::where('treatment_id', $treatmentId)->findOrFail($optionId);
 
         if ($option->patientProcedures()->count() > 0) {
             return response()->json([
@@ -329,14 +321,14 @@ class TreatmentController extends Controller
                     'name' => $s->name,
                     'sort_order' => $s->sort_order,
                     'active' => (bool) $s->active,
-                    'options' => $s->relationLoaded('options')
-                        ? $s->options->map(fn ($o) => [
-                            'id' => $o->id,
-                            'name' => $o->name,
-                            'sort_order' => $o->sort_order,
-                            'active' => (bool) $o->active,
-                        ])->values()->toArray()
-                        : [],
+                ])->values()->toArray()
+                : [],
+            'options' => $treatment->relationLoaded('subclassOptions')
+                ? $treatment->subclassOptions->map(fn ($o) => [
+                    'id' => $o->id,
+                    'name' => $o->name,
+                    'sort_order' => $o->sort_order,
+                    'active' => (bool) $o->active,
                 ])->values()->toArray()
                 : [],
             'chair' => $treatment->chair ? [

@@ -363,6 +363,21 @@ class ApiClient {
       this.client.delete(`/procedure-photos/${photoId}`),
   }
 
+  // Métodos de fotos de odontograma
+  odontogramPhotos = {
+    list: (patientId: number): Promise<AxiosResponse<ApiResponse<any[]>>> =>
+      this.client.get(`/patients/${patientId}/odontogram-photos`),
+
+    uploadBase64: (patientId: number, data: { image: string, description?: string }): Promise<AxiosResponse<ApiResponse<any>>> =>
+      this.client.post(`/patients/${patientId}/odontogram-photos/base64`, data),
+
+    update: (photoId: number, data: { description?: string }): Promise<AxiosResponse<ApiResponse<any>>> =>
+      this.client.put(`/odontogram-photos/${photoId}`, data),
+
+    delete: (photoId: number): Promise<AxiosResponse<ApiResponse>> =>
+      this.client.delete(`/odontogram-photos/${photoId}`),
+  }
+
   // Métodos genéricos para llamadas directas
   get<T = any>(url: string, config?: any): Promise<AxiosResponse<T>> {
     return this.client.get(url, config)

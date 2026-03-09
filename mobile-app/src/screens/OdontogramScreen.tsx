@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { View, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native'
+import { View, ScrollView, StyleSheet, TouchableOpacity, Alert, Image, Modal, Pressable, TextInput } from 'react-native'
 import { Text, Button, Surface, Chip, ActivityIndicator, FAB } from 'react-native-paper'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useRoute } from '@react-navigation/native'
+import { Ionicons } from '@expo/vector-icons'
+import * as ImagePicker from 'expo-image-picker'
 import { api } from '../lib/api'
+import { useAuthStore } from '../store/auth'
 import AddProcedureModal from '../components/AddProcedureModal'
 
 interface PatientProcedure {
@@ -92,6 +95,7 @@ export default function OdontogramScreen() {
   const route = useRoute()
   const params = route.params as { patientId: number; isPediatric?: boolean } | undefined
 
+  const { user } = useAuthStore()
   const [procedures, setProcedures] = useState<PatientProcedure[]>([])
   const [chairs, setChairs] = useState<Chair[]>([])
   const [loading, setLoading] = useState(true)
@@ -99,10 +103,20 @@ export default function OdontogramScreen() {
   const [modalVisible, setModalVisible] = useState(false)
   const [prosthesisLoading, setProsthesisLoading] = useState(false)
 
+  // Photo gallery state
+  const [odontoPhotos, setOdontoPhotos] = useState<any[]>([])
+  const [photosLoading, setPhotosLoading] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [selectedPhoto, setSelectedPhoto] = useState<any>(null)
+  const [photoModalVisible, setPhotoModalVisible] = useState(false)
+  const [editingDescription, setEditingDescription] = useState(false)
+  const [newDescription, setNewDescription] = useState('')
+
   useEffect(() => {
     if (params?.patientId) {
       loadProcedures()
       loadChairs()
+      loadOdontoPhotos()
     } else {
       setLoading(false)
     }
@@ -131,6 +145,131 @@ export default function OdontogramScreen() {
     } catch (error) {
       console.error('Error loading chairs:', error)
     }
+  }
+
+  const loadOdontoPhotos = async () => {
+    if (!params?.patientId) return
+    try {
+      setPhotosLoading(true)
+      const response = await api.odontogramPhotos.list(params.patientId)
+      setOdontoPhotos(response.data.data || [])
+    } catch (error) {
+      console.error('Error loading odontogram photos:', error)
+    } finally {
+      setPhotosLoading(false)
+    }
+  }
+
+  const showPhotoOptions = () => {
+    Alert.alert('Agregar Foto', 'Selecciona una opción', [
+      { text: 'Cámara', onPress: () => captureOdontoPhoto('camera') },
+      { text: 'Galería', onPress: () => captureOdontoPhoto('gallery') },
+      { text: 'Cancelar', style: 'cancel' },
+    ])
+  }
+
+  const captureOdontoPhoto = async (source: 'camera' | 'gallery') => {
+    if (source === 'camera') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync()
+      if (status !== 'granted') {
+        Alert.alert('Permiso denegado', 'Necesitamos acceso a la cámara')
+        return
+      }
+    } else {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      if (status !== 'granted') {
+        Alert.alert('Permiso denegado', 'Necesitamos acceso a la galería')
+        return
+      }
+    }
+
+    const isCamera = source === 'camera'
+    const pickerFn = isCamera ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync
+
+    const result = await pickerFn({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: isCamera,
+      allowsMultipleSelection: !isCamera,
+      quality: 0.8,
+      base64: true,
+    })
+
+    if (!result.canceled && result.assets.length > 0) {
+      const validAssets = result.assets.filter(a => a.base64)
+      if (validAssets.length === 0) return
+
+      setUploadingPhoto(true)
+      let uploaded = 0
+      let failed = 0
+      try {
+        for (const asset of validAssets) {
+          try {
+            const base64Image = `data:image/jpeg;base64,${asset.base64}`
+            await api.odontogramPhotos.uploadBase64(params?.patientId || 0, { image: base64Image })
+            uploaded++
+          } catch {
+            failed++
+          }
+        }
+        if (failed > 0) {
+          Alert.alert('Resultado', `${uploaded} foto(s) subida(s), ${failed} fallida(s)`)
+        } else {
+          Alert.alert('Éxito', uploaded === 1 ? 'Foto subida correctamente' : `${uploaded} fotos subidas correctamente`)
+        }
+        loadOdontoPhotos()
+      } catch (error: any) {
+        Alert.alert('Error', error.response?.data?.message || 'No se pudieron subir las fotos')
+      } finally {
+        setUploadingPhoto(false)
+      }
+    }
+  }
+
+  const handleDeleteOdontoPhoto = (photo: any) => {
+    Alert.alert('Eliminar Foto', '¿Estás seguro que deseas eliminar esta foto?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.odontogramPhotos.delete(photo.id)
+            setOdontoPhotos(prev => prev.filter(p => p.id !== photo.id))
+            setPhotoModalVisible(false)
+            setSelectedPhoto(null)
+            Alert.alert('Éxito', 'Foto eliminada correctamente')
+          } catch (error: any) {
+            Alert.alert('Error', error.response?.data?.message || 'No se pudo eliminar la foto')
+          }
+        },
+      },
+    ])
+  }
+
+  const handleUpdateOdontoDescription = async () => {
+    if (!selectedPhoto) return
+    try {
+      await api.odontogramPhotos.update(selectedPhoto.id, { description: newDescription })
+      setOdontoPhotos(prev => prev.map(p => p.id === selectedPhoto.id ? { ...p, description: newDescription } : p))
+      setSelectedPhoto({ ...selectedPhoto, description: newDescription })
+      setEditingDescription(false)
+      Alert.alert('Éxito', 'Descripción actualizada')
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'No se pudo actualizar')
+    }
+  }
+
+  const openOdontoPhotoModal = (photo: any) => {
+    setSelectedPhoto(photo)
+    setNewDescription(photo.description || '')
+    setPhotoModalVisible(true)
+    setEditingDescription(false)
+  }
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return ''
+    const d = new Date(dateStr)
+    return d.toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
   }
 
   const proceduresByTooth = procedures.reduce((acc, procedure) => {
@@ -510,6 +649,54 @@ export default function OdontogramScreen() {
           </View>
         </Surface>
 
+        {/* Galería de Fotos del Odontograma */}
+        <Surface style={styles.photoGallerySection}>
+          <View style={styles.photoGalleryHeader}>
+            <Text style={styles.photoGalleryTitle}>Galería de Fotos</Text>
+            <TouchableOpacity
+              style={styles.addPhotoBtn}
+              onPress={showPhotoOptions}
+              disabled={uploadingPhoto}
+            >
+              {uploadingPhoto ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="camera" size={16} color="#fff" />
+                  <Text style={styles.addPhotoBtnText}>Agregar</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {photosLoading ? (
+            <View style={styles.photosLoadingBox}>
+              <ActivityIndicator size="small" color="#2196F3" />
+            </View>
+          ) : odontoPhotos.length > 0 ? (
+            <View style={styles.photosGrid}>
+              {odontoPhotos.map((photo) => (
+                <TouchableOpacity
+                  key={photo.id}
+                  style={styles.photoThumb}
+                  onPress={() => openOdontoPhotoModal(photo)}
+                >
+                  <Image source={{ uri: photo.url }} style={styles.photoThumbImage} />
+                  <View style={styles.photoDateOverlay}>
+                    <Text style={styles.photoDateText}>{formatDate(photo.taken_at)}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyPhotos}>
+              <Ionicons name="images-outline" size={40} color="#9CA3AF" />
+              <Text style={styles.emptyPhotosText}>No hay fotos del odontograma</Text>
+              <Text style={styles.emptyPhotosSubtext}>Toca "Agregar" para subir fotos de la dentadura</Text>
+            </View>
+          )}
+        </Surface>
+
         {/* Botón Volver */}
         <View style={styles.buttonContainer}>
           <Button
@@ -521,6 +708,93 @@ export default function OdontogramScreen() {
           </Button>
         </View>
       </ScrollView>
+
+      {/* Modal de foto del odontograma */}
+      <Modal
+        visible={photoModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPhotoModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setPhotoModalVisible(false)}>
+          <Pressable style={styles.modalContent} onPress={e => e.stopPropagation()}>
+            {selectedPhoto && (
+              <>
+                <Image source={{ uri: selectedPhoto.url }} style={styles.modalImage} resizeMode="contain" />
+                <View style={styles.modalInfo}>
+                  <Text style={styles.modalDate}>
+                    <Ionicons name="calendar-outline" size={14} color="#6B7280" /> {formatDate(selectedPhoto.taken_at)}
+                  </Text>
+                  {selectedPhoto.created_by && (
+                    <Text style={styles.modalAuthor}>
+                      <Ionicons name="person-outline" size={14} color="#6B7280" /> {selectedPhoto.created_by.name}
+                    </Text>
+                  )}
+
+                  {editingDescription ? (
+                    <View style={styles.descriptionEditBox}>
+                      <TextInput
+                        style={styles.descriptionInput}
+                        value={newDescription}
+                        onChangeText={setNewDescription}
+                        placeholder="Descripción de la foto..."
+                        multiline
+                      />
+                      <View style={styles.descriptionActions}>
+                        <TouchableOpacity onPress={() => setEditingDescription(false)} style={styles.descCancelBtn}>
+                          <Text style={styles.descCancelText}>Cancelar</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleUpdateOdontoDescription} style={styles.descSaveBtn}>
+                          <Text style={styles.descSaveText}>Guardar</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (selectedPhoto.created_by?.id === user?.id) {
+                          setEditingDescription(true)
+                        }
+                      }}
+                    >
+                      <Text style={styles.modalDescription}>
+                        {selectedPhoto.description || 'Sin descripción'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                <View style={styles.modalButtons}>
+                  {selectedPhoto.created_by?.id === user?.id && (
+                    <>
+                      <TouchableOpacity
+                        style={styles.modalEditBtn}
+                        onPress={() => setEditingDescription(true)}
+                      >
+                        <Ionicons name="pencil" size={18} color="#3B82F6" />
+                        <Text style={styles.modalEditText}>Editar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.modalDeleteBtn}
+                        onPress={() => handleDeleteOdontoPhoto(selectedPhoto)}
+                      >
+                        <Ionicons name="trash" size={18} color="#EF4444" />
+                        <Text style={styles.modalDeleteText}>Eliminar</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  <TouchableOpacity
+                    style={styles.modalCloseBtn}
+                    onPress={() => setPhotoModalVisible(false)}
+                  >
+                    <Text style={styles.modalCloseText}>Cerrar</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* FAB para agregar procedimiento */}
       <FAB
@@ -828,5 +1102,200 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500' as const,
     color: '#374151',
+  },
+  // Photo gallery styles
+  photoGallerySection: {
+    padding: 16,
+    marginBottom: 16,
+    borderRadius: 8,
+    elevation: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  photoGalleryHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: 12,
+  },
+  photoGalleryTitle: {
+    fontSize: 16,
+    fontWeight: 'bold' as const,
+    color: '#1F2937',
+  },
+  addPhotoBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  addPhotoBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600' as const,
+  },
+  photosLoadingBox: {
+    padding: 24,
+    alignItems: 'center' as const,
+  },
+  photosGrid: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    gap: 8,
+  },
+  photoThumb: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    overflow: 'hidden' as const,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  photoThumbImage: {
+    width: '100%' as const,
+    height: '100%' as const,
+  },
+  photoDateOverlay: {
+    position: 'absolute' as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+  },
+  photoDateText: {
+    color: '#fff',
+    fontSize: 9,
+    textAlign: 'center' as const,
+  },
+  emptyPhotos: {
+    padding: 24,
+    alignItems: 'center' as const,
+    gap: 8,
+  },
+  emptyPhotosText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  emptyPhotosSubtext: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textAlign: 'center' as const,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    padding: 16,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: '100%' as const,
+    maxHeight: '90%' as const,
+    overflow: 'hidden' as const,
+  },
+  modalImage: {
+    width: '100%' as const,
+    height: 300,
+    backgroundColor: '#f0f0f0',
+  },
+  modalInfo: {
+    padding: 16,
+    gap: 6,
+  },
+  modalDate: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  modalAuthor: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: '#374151',
+    marginTop: 4,
+    fontStyle: 'italic' as const,
+  },
+  descriptionEditBox: {
+    marginTop: 8,
+  },
+  descriptionInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 14,
+    minHeight: 60,
+    textAlignVertical: 'top' as const,
+  },
+  descriptionActions: {
+    flexDirection: 'row' as const,
+    justifyContent: 'flex-end' as const,
+    gap: 12,
+    marginTop: 8,
+  },
+  descCancelBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  descCancelText: {
+    color: '#6B7280',
+    fontSize: 14,
+  },
+  descSaveBtn: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  descSaveText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600' as const,
+  },
+  modalButtons: {
+    flexDirection: 'row' as const,
+    justifyContent: 'flex-end' as const,
+    alignItems: 'center' as const,
+    padding: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    gap: 16,
+  },
+  modalEditBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 4,
+  },
+  modalEditText: {
+    color: '#3B82F6',
+    fontSize: 14,
+  },
+  modalDeleteBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 4,
+  },
+  modalDeleteText: {
+    color: '#EF4444',
+    fontSize: 14,
+  },
+  modalCloseBtn: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  modalCloseText: {
+    color: '#374151',
+    fontSize: 14,
+    fontWeight: '500' as const,
   },
 })

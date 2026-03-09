@@ -413,6 +413,16 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
               </AppText>
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={styles.viewFichaButton}
+            onPress={() => navigation.navigate('PatientDetail', { patientId: data.patient_procedure.patient.id })}
+          >
+            <Ionicons name="document-text-outline" size={16} color={colors.brandTurquoise} />
+            <AppText variant="caption" color="brandTurquoise" weight="semibold" style={{ marginLeft: 6 }}>
+              Ver Ficha del Paciente
+            </AppText>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
@@ -1033,6 +1043,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.sm,
+  },
+  viewFichaButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.brandTurquoise,
+    borderRadius: 8,
   },
   descriptionBox: {
     marginTop: spacing.sm,

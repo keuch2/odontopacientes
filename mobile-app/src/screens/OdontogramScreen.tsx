@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { View, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native'
-import { Text, Button, Surface, Chip, ActivityIndicator, FAB, Menu, Divider } from 'react-native-paper'
+import { Text, Button, Surface, Chip, ActivityIndicator, FAB } from 'react-native-paper'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { api } from '../lib/api'
@@ -59,19 +59,19 @@ const PEDIATRIC_TOOTH_NUMBERS_LOWER = [
 ]
 
 const PROCEDURE_STATUS_COLORS = {
-  disponible: '#FEF3C7',
-  proceso: '#DBEAFE',
-  finalizado: '#D1FAE5',
-  contraindicado: '#FEE2E2',
+  disponible: '#FEE2E2',
+  proceso: '#FEF3C7',
+  finalizado: '#DBEAFE',
+  contraindicado: '#F3E8FF',
   ausente: '#D1D5DB',
   cancelado: '#E5E7EB',
 }
 
 const PROCEDURE_STATUS_BORDER_COLORS = {
-  disponible: '#F59E0B',
-  proceso: '#3B82F6',
-  finalizado: '#10B981',
-  contraindicado: '#EF4444',
+  disponible: '#EF4444',
+  proceso: '#F59E0B',
+  finalizado: '#3B82F6',
+  contraindicado: '#9333EA',
   ausente: '#6B7280',
   cancelado: '#9CA3AF',
 }
@@ -98,9 +98,6 @@ export default function OdontogramScreen() {
   const [selectedTeeth, setSelectedTeeth] = useState<Set<string>>(new Set())
   const [modalVisible, setModalVisible] = useState(false)
   const [prosthesisLoading, setProsthesisLoading] = useState(false)
-  const [filterMenuVisible, setFilterMenuVisible] = useState(false)
-  const [filterStatus, setFilterStatus] = useState<string>('all')
-  const [filterChair, setFilterChair] = useState<string>('all')
 
   useEffect(() => {
     if (params?.patientId) {
@@ -136,14 +133,7 @@ export default function OdontogramScreen() {
     }
   }
 
-  // Aplicar filtros
-  const filteredProcedures = procedures.filter(procedure => {
-    if (filterStatus !== 'all' && procedure.status !== filterStatus) return false
-    if (filterChair !== 'all' && procedure.chair.id.toString() !== filterChair) return false
-    return true
-  })
-
-  const proceduresByTooth = filteredProcedures.reduce((acc, procedure) => {
+  const proceduresByTooth = procedures.reduce((acc, procedure) => {
     if (procedure.tooth_fdi) {
       const teeth = procedure.tooth_fdi.split(',').map((t: string) => t.trim())
       for (const tooth of teeth) {
@@ -344,84 +334,6 @@ export default function OdontogramScreen() {
           <Text style={styles.infoText}>
             <Text style={styles.infoBold}>Odontograma basado en procedimientos:</Text> Los colores indican el estado de los procedimientos asignados a cada diente. Toca un diente para ver sus procedimientos.
           </Text>
-        </Surface>
-
-        {/* Filtros */}
-        <Surface style={styles.filterCard}>
-          <View style={styles.filterHeader}>
-            <Text style={styles.filterTitle}>Filtros</Text>
-            {(filterStatus !== 'all' || filterChair !== 'all') && (
-              <Button
-                mode="text"
-                onPress={() => {
-                  setFilterStatus('all')
-                  setFilterChair('all')
-                }}
-                compact
-              >
-                Limpiar
-              </Button>
-            )}
-          </View>
-          <View style={styles.filterRow}>
-            <View style={styles.filterItem}>
-              <Text style={styles.filterLabel}>Estado:</Text>
-              <Menu
-                visible={filterMenuVisible && filterStatus !== 'all'}
-                onDismiss={() => setFilterMenuVisible(false)}
-                anchor={
-                  <Button
-                    mode="outlined"
-                    onPress={() => setFilterMenuVisible(true)}
-                    style={styles.filterButton}
-                    contentStyle={styles.filterButtonContent}
-                  >
-                    {filterStatus === 'all' ? 'Todos' : PROCEDURE_STATUS_LABELS[filterStatus as keyof typeof PROCEDURE_STATUS_LABELS]}
-                  </Button>
-                }
-              >
-                <Menu.Item onPress={() => { setFilterStatus('all'); setFilterMenuVisible(false) }} title="Todos" />
-                <Divider />
-                <Menu.Item onPress={() => { setFilterStatus('disponible'); setFilterMenuVisible(false) }} title="Disponible" />
-                <Menu.Item onPress={() => { setFilterStatus('proceso'); setFilterMenuVisible(false) }} title="En Proceso" />
-                <Menu.Item onPress={() => { setFilterStatus('finalizado'); setFilterMenuVisible(false) }} title="Finalizado" />
-                <Menu.Item onPress={() => { setFilterStatus('contraindicado'); setFilterMenuVisible(false) }} title="Contraindicado" />
-                <Menu.Item onPress={() => { setFilterStatus('ausente'); setFilterMenuVisible(false) }} title="Ausente" />
-              </Menu>
-            </View>
-            <View style={styles.filterItem}>
-              <Text style={styles.filterLabel}>Cátedra:</Text>
-              <Menu
-                visible={filterMenuVisible && filterChair !== 'all'}
-                onDismiss={() => setFilterMenuVisible(false)}
-                anchor={
-                  <Button
-                    mode="outlined"
-                    onPress={() => setFilterMenuVisible(true)}
-                    style={styles.filterButton}
-                    contentStyle={styles.filterButtonContent}
-                  >
-                    {filterChair === 'all' ? 'Todas' : chairs.find(c => c.id.toString() === filterChair)?.name || 'Todas'}
-                  </Button>
-                }
-              >
-                <Menu.Item onPress={() => { setFilterChair('all'); setFilterMenuVisible(false) }} title="Todas" />
-                <Divider />
-                {chairs.map(chair => (
-                  <Menu.Item
-                    key={chair.id}
-                    onPress={() => { setFilterChair(chair.id.toString()); setFilterMenuVisible(false) }}
-                    title={chair.name}
-                  />
-                ))}
-              </Menu>
-            </View>
-          </View>
-          {(filterStatus !== 'all' || filterChair !== 'all') && (
-            <Text style={styles.filterCount}>
-              Mostrando {filteredProcedures.length} de {procedures.length} procedimientos
-            </Text>
-          )}
         </Surface>
 
         {/* Arcada Superior Adulto */}
@@ -663,49 +575,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#E3F2FD',
     elevation: 1,
-  },
-  filterCard: {
-    padding: 12,
-    marginBottom: 16,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    elevation: 2,
-  },
-  filterHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  filterTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1F2937',
-  },
-  filterRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  filterItem: {
-    flex: 1,
-  },
-  filterLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#4B5563',
-    marginBottom: 6,
-  },
-  filterButton: {
-    borderColor: '#D1D5DB',
-  },
-  filterButtonContent: {
-    paddingVertical: 4,
-  },
-  filterCount: {
-    marginTop: 8,
-    fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
   },
   infoText: {
     fontSize: 13,

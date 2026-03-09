@@ -135,31 +135,49 @@ export default function ProcedureViewScreen() {
       }
     }
 
-    const pickerFn = source === 'camera' 
+    const isCamera = source === 'camera'
+    const pickerFn = isCamera
       ? ImagePicker.launchCameraAsync 
       : ImagePicker.launchImageLibraryAsync
 
     const result = await pickerFn({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
+      allowsEditing: isCamera,
+      allowsMultipleSelection: !isCamera,
       quality: 0.8,
       base64: true,
     })
 
-    if (!result.canceled && result.assets[0].base64) {
+    if (!result.canceled && result.assets.length > 0) {
+      const validAssets = result.assets.filter(a => a.base64)
+      if (validAssets.length === 0) return
+
       setUploadingPhoto(true)
+      let uploaded = 0
+      let failed = 0
       try {
-        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`
-        if (procedure?.assignment?.id && isUserAssigned()) {
-          await api.procedurePhotos.uploadBase64(procedure.assignment.id, { image: base64Image })
-        } else {
-          await api.procedurePhotos.uploadBase64ByProcedure(procedure.id, { image: base64Image })
+        for (const asset of validAssets) {
+          try {
+            const base64Image = `data:image/jpeg;base64,${asset.base64}`
+            if (procedure?.assignment?.id && isUserAssigned()) {
+              await api.procedurePhotos.uploadBase64(procedure.assignment.id, { image: base64Image })
+            } else {
+              await api.procedurePhotos.uploadBase64ByProcedure(procedure.id, { image: base64Image })
+            }
+            uploaded++
+          } catch {
+            failed++
+          }
         }
-        Alert.alert('Éxito', 'Foto subida correctamente')
+        if (failed > 0) {
+          Alert.alert('Resultado', `${uploaded} foto(s) subida(s), ${failed} fallida(s)`)
+        } else {
+          Alert.alert('Éxito', uploaded === 1 ? 'Foto subida correctamente' : `${uploaded} fotos subidas correctamente`)
+        }
         fetchPhotos()
       } catch (error: any) {
-        console.error('Error uploading photo:', error)
-        Alert.alert('Error', error.response?.data?.message || 'No se pudo subir la foto')
+        console.error('Error uploading photos:', error)
+        Alert.alert('Error', error.response?.data?.message || 'No se pudieron subir las fotos')
       } finally {
         setUploadingPhoto(false)
       }

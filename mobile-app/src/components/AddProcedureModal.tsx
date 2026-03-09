@@ -250,18 +250,20 @@ export default function AddProcedureModal({
       ? ImagePicker.launchCameraAsync
       : ImagePicker.launchImageLibraryAsync;
 
+    const isCamera = source === 'camera';
     const result = await pickerFn({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
+      allowsEditing: isCamera,
+      allowsMultipleSelection: !isCamera,
       quality: 0.8,
       base64: true,
     });
 
-    if (!result.canceled && result.assets[0]?.base64) {
-      setPendingPhotos(prev => [...prev, {
-        uri: result.assets[0].uri,
-        base64: result.assets[0].base64!,
-      }]);
+    if (!result.canceled && result.assets.length > 0) {
+      const newPhotos = result.assets
+        .filter(a => a.base64)
+        .map(a => ({ uri: a.uri, base64: a.base64! }));
+      setPendingPhotos(prev => [...prev, ...newPhotos]);
     }
   };
 

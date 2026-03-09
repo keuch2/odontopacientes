@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { View, StyleSheet, ScrollView, TouchableOpacity, Linking, ActivityIndicator } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRoute } from '@react-navigation/native'
+import { useRoute, useFocusEffect } from '@react-navigation/native'
 import { AppText, AppButton } from '../components/ui'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
@@ -30,6 +30,15 @@ export default function PatientDetailScreen({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<TabType>('disponible')
   const [addProcedureModalVisible, setAddProcedureModalVisible] = useState(false)
 
+  // Refetch procedures every time the screen gets focus
+  useFocusEffect(
+    useCallback(() => {
+      if (patientId) {
+        queryClient.invalidateQueries({ queryKey: ['patient-procedures', patientId] })
+      }
+    }, [patientId])
+  )
+
   // Cargar datos del paciente desde la API
   const { data: patientData, isLoading: patientLoading, error: patientError } = useQuery<any>({
     queryKey: ['patient', patientId],
@@ -39,6 +48,7 @@ export default function PatientDetailScreen({ navigation }: any) {
       return response.data.data
     },
     enabled: !!patientId,
+    refetchOnMount: 'always',
   })
 
   // Cargar procedimientos del paciente
@@ -50,6 +60,7 @@ export default function PatientDetailScreen({ navigation }: any) {
       return response.data.data || []
     },
     enabled: !!patientId,
+    refetchOnMount: 'always',
   })
 
   // Transformar datos del paciente al formato esperado

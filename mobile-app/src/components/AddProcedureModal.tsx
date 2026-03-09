@@ -4,7 +4,6 @@ import {
   Portal,
   Button,
   TextInput,
-  SegmentedButtons,
   HelperText,
   ActivityIndicator,
   Checkbox,
@@ -75,6 +74,7 @@ export default function AddProcedureModal({
   const [treatmentMenuVisible, setTreatmentMenuVisible] = useState(false);
   const [subclassMenuVisible, setSubclassMenuVisible] = useState(false);
   const [optionMenuVisible, setOptionMenuVisible] = useState(false);
+  const [statusMenuVisible, setStatusMenuVisible] = useState(false);
   
   // Form fields
   const [selectedChairId, setSelectedChairId] = useState<number | null>(null);
@@ -513,20 +513,34 @@ export default function AddProcedureModal({
                 {/* Status - only show if not auto-assigning */}
                 {!autoAssign && (
                   <View style={styles.field}>
-                    <HelperText type="info" visible>
-                      Estado
-                    </HelperText>
-                    <SegmentedButtons
-                      value={status}
-                      onValueChange={setStatus}
-                      buttons={[
-                        { value: 'disponible', label: 'Disp...' },
-                        { value: 'proceso', label: 'En P...' },
-                        { value: 'finalizado', label: 'Final...' },
-                        { value: 'contraindicado', label: 'Cont...' },
-                      ]}
-                      style={styles.segmented}
-                    />
+                    <Text style={styles.fieldLabel}>Estado</Text>
+                    <TouchableOpacity
+                      style={[styles.dropdownButton, styles.dropdownButtonSelected]}
+                      onPress={() => { setStatusMenuVisible(!statusMenuVisible); setChairMenuVisible(false); setTreatmentMenuVisible(false); setSubclassMenuVisible(false); setOptionMenuVisible(false); }}
+                    >
+                      <Text style={[styles.dropdownButtonText, styles.dropdownButtonTextSelected]}>
+                        {status === 'disponible' ? 'Disponible' : status === 'proceso' ? 'En Proceso' : status === 'finalizado' ? 'Finalizado' : 'Contraindicado'}
+                      </Text>
+                      <Text style={styles.dropdownArrow}>{statusMenuVisible ? '▲' : '▼'}</Text>
+                    </TouchableOpacity>
+                    {statusMenuVisible && (
+                      <View style={styles.optionsList}>
+                        {[
+                          { value: 'disponible', label: 'Disponible' },
+                          { value: 'proceso', label: 'En Proceso' },
+                          { value: 'finalizado', label: 'Finalizado' },
+                          { value: 'contraindicado', label: 'Contraindicado' },
+                        ].map((opt) => (
+                          <TouchableOpacity
+                            key={opt.value}
+                            style={[styles.optionItem, status === opt.value && styles.optionItemSelected]}
+                            onPress={() => { setStatus(opt.value); setStatusMenuVisible(false); }}
+                          >
+                            <Text style={[styles.optionText, status === opt.value && styles.optionTextSelected]}>{opt.label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
                   </View>
                 )}
 

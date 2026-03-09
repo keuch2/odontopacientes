@@ -44,7 +44,7 @@ interface AddProcedureModalProps {
   onDismiss: () => void;
   onSuccess: () => void;
   patientId: number;
-  selectedTeeth: string[];
+  selectedTeeth?: string[];
 }
 
 const TOOTH_SURFACES = [
@@ -89,6 +89,7 @@ export default function AddProcedureModal({
   const [isRepair, setIsRepair] = useState(false);
   const [pendingPhotos, setPendingPhotos] = useState<{ uri: string; base64: string }[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [toothFdiInput, setToothFdiInput] = useState('');
 
   // Load chairs and treatments
   useEffect(() => {
@@ -141,8 +142,13 @@ export default function AddProcedureModal({
   };
 
   const handleSubmit = async () => {
-    if (selectedTeeth.length === 0) {
-      Alert.alert('Error', 'No hay dientes seleccionados');
+    // Determine teeth to use
+    const teethToUse = selectedTeeth && selectedTeeth.length > 0
+      ? selectedTeeth
+      : toothFdiInput.trim() ? toothFdiInput.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+    if (teethToUse.length === 0) {
+      Alert.alert('Error', 'Debes indicar al menos un diente');
       return;
     }
 
@@ -155,7 +161,7 @@ export default function AddProcedureModal({
     setLoading(true);
     try {
       const createdProcedureIds: number[] = [];
-      for (const toothFdi of selectedTeeth) {
+      for (const toothFdi of teethToUse) {
         const res = await api.procedures.createForPatient(patientId, {
           treatment_id: selectedTreatmentId,
           treatment_subclass_id: selectedSubclassId || null,
@@ -191,7 +197,7 @@ export default function AddProcedureModal({
         setUploadingPhotos(false);
       }
 
-      Alert.alert('Éxito', `Procedimiento agregado a ${selectedTeeth.length} diente(s)`);
+      Alert.alert('Éxito', `Procedimiento agregado a ${teethToUse.length} diente(s)`);
       resetForm();
       onSuccess();
       onDismiss();
@@ -217,6 +223,7 @@ export default function AddProcedureModal({
     setIsRepair(false);
     setPendingPhotos([]);
     setUploadingPhotos(false);
+    setToothFdiInput('');
   };
 
   const showPhotoOptions = () => {
@@ -291,19 +298,33 @@ export default function AddProcedureModal({
               </View>
             ) : (
               <>
-                {/* Dientes seleccionados */}
-                <View style={styles.selectedTeethSection}>
-                  <Text style={styles.selectedTeethLabel}>
-                    Dientes seleccionados:
-                  </Text>
-                  <View style={styles.selectedTeethChips}>
-                    {selectedTeeth.map(t => (
-                      <View key={t} style={styles.toothChip}>
-                        <Text style={styles.toothChipText}>{t}</Text>
-                      </View>
-                    ))}
+                {/* Dientes seleccionados o input */}
+                {selectedTeeth && selectedTeeth.length > 0 ? (
+                  <View style={styles.selectedTeethSection}>
+                    <Text style={styles.selectedTeethLabel}>
+                      Dientes seleccionados:
+                    </Text>
+                    <View style={styles.selectedTeethChips}>
+                      {selectedTeeth.map(t => (
+                        <View key={t} style={styles.toothChip}>
+                          <Text style={styles.toothChipText}>{t}</Text>
+                        </View>
+                      ))}
+                    </View>
                   </View>
-                </View>
+                ) : (
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>Diente FDI *</Text>
+                    <TextInput
+                      value={toothFdiInput}
+                      onChangeText={setToothFdiInput}
+                      mode="outlined"
+                      keyboardType="numeric"
+                      placeholder="Ej: 36 (separar con coma para varios: 11,21)"
+                      style={styles.input}
+                    />
+                  </View>
+                )}
 
                 {/* Chair Selector */}
                 <View style={styles.field}>

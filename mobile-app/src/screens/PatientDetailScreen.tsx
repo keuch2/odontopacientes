@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react'
 import { View, StyleSheet, ScrollView, TouchableOpacity, Linking, ActivityIndicator } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRoute } from '@react-navigation/native'
 import { AppText, AppButton } from '../components/ui'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
 import { api } from '../lib/api'
+import AddProcedureModal from '../components/AddProcedureModal'
 
 type TabType = 'disponible' | 'proceso' | 'finalizado' | 'cancelado'
 
@@ -25,7 +26,9 @@ export default function PatientDetailScreen({ navigation }: any) {
   const params = route.params as { patientId?: number } | undefined
   const patientId = params?.patientId
 
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<TabType>('disponible')
+  const [addProcedureModalVisible, setAddProcedureModalVisible] = useState(false)
 
   // Cargar datos del paciente desde la API
   const { data: patientData, isLoading: patientLoading, error: patientError } = useQuery<any>({
@@ -188,7 +191,7 @@ export default function PatientDetailScreen({ navigation }: any) {
           <View style={styles.actionButtons}>
             <TouchableOpacity 
               style={styles.smallActionButton}
-              onPress={() => navigation.navigate('CreateProcedure' as never, { patientId: patient.id } as never)}
+              onPress={() => setAddProcedureModalVisible(true)}
             >
               <Ionicons name="add-circle-outline" size={16} color={colors.white} />
               <AppText color="white" weight="semibold" style={styles.smallButtonText}>Agregar Procedimiento</AppText>
@@ -396,6 +399,15 @@ export default function PatientDetailScreen({ navigation }: any) {
 
         <View style={styles.spacer} />
       </ScrollView>
+
+      <AddProcedureModal
+        visible={addProcedureModalVisible}
+        onDismiss={() => setAddProcedureModalVisible(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['patient-procedures', patientId] })
+        }}
+        patientId={patient.id}
+      />
     </View>
   )
 }

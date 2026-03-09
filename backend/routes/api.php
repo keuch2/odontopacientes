@@ -273,6 +273,12 @@ Route::middleware('demo.auth')->group(function () {
     Route::put('/odontograms/{odontogram}/teeth', [\App\Http\Controllers\Api\OdontogramController::class, 'updateTooth']);
     Route::delete('/odontograms/{odontogram}/teeth/{toothFdi}', [\App\Http\Controllers\Api\OdontogramController::class, 'deleteTooth']);
     
+    // Odontogram Photos
+    Route::get('/patients/{patient}/odontogram-photos', [\App\Http\Controllers\Api\OdontogramPhotoController::class, 'index']);
+    Route::post('/patients/{patient}/odontogram-photos/base64', [\App\Http\Controllers\Api\OdontogramPhotoController::class, 'storeBase64']);
+    Route::put('/odontogram-photos/{odontogramPhoto}', [\App\Http\Controllers\Api\OdontogramPhotoController::class, 'update']);
+    Route::delete('/odontogram-photos/{odontogramPhoto}', [\App\Http\Controllers\Api\OdontogramPhotoController::class, 'destroy']);
+
     // Procedure Photos
     Route::get('/assignments/{assignment}/photos', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'index']);
     Route::post('/assignments/{assignment}/photos', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'store']);

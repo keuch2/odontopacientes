@@ -830,7 +830,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
               <DateTimePicker
                 value={sessionDate}
                 mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display="default"
                 onChange={onDateChange}
               />
             )}
@@ -839,7 +839,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
               <DateTimePicker
                 value={sessionDate}
                 mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display="default"
                 onChange={onTimeChange}
               />
             )}
@@ -921,7 +921,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
               <DateTimePicker
                 value={sessionDate}
                 mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display="default"
                 onChange={onDateChange}
               />
             )}
@@ -930,7 +930,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
               <DateTimePicker
                 value={sessionDate}
                 mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display="default"
                 onChange={onTimeChange}
               />
             )}

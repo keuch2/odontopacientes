@@ -1,8 +1,27 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Plus, ClipboardList, Loader2, Edit2, Trash2, X } from 'lucide-react'
+import {
+  Plus, ClipboardList, Loader2, Edit2, Trash2, X,
+  Scissors, HeartPulse, Bone, Syringe, Microscope,
+  ShieldCheck, ScanFace, Baby, Paintbrush, Wrench, Circle,
+} from 'lucide-react'
 import { api } from '@/lib/api'
+
+const ICON_MAP: Record<string, React.ComponentType<any>> = {
+  'clipboard-list': ClipboardList,
+  'scissors': Scissors,
+  'heart-pulse': HeartPulse,
+  'bone': Bone,
+  'syringe': Syringe,
+  'microscope': Microscope,
+  'tooth': Circle,
+  'shield-check': ShieldCheck,
+  'scan-face': ScanFace,
+  'baby': Baby,
+  'paintbrush': Paintbrush,
+  'wrench': Wrench,
+}
 
 const ICON_OPTIONS = [
   { value: 'clipboard-list', label: 'Portapapeles' },
@@ -155,7 +174,7 @@ export default function ChairsPage() {
                       className="h-12 w-12 rounded-lg flex items-center justify-center"
                       style={{ backgroundColor: chair.color || '#6366F1' }}
                     >
-                      <ClipboardList className="h-6 w-6 text-white" />
+                      {(() => { const IC = ICON_MAP[chair.icon]; return IC ? <IC className="h-6 w-6 text-white" /> : <ClipboardList className="h-6 w-6 text-white" /> })()}
                     </div>
                     <div className="ml-3">
                       <h3 className="text-lg font-semibold text-slate-900">{chair.name}</h3>
@@ -305,13 +324,14 @@ export default function ChairsPage() {
                       key={opt.value}
                       type="button"
                       onClick={() => setForm({ ...form, icon: opt.value })}
-                      className={`p-2 rounded-lg border text-center text-xs transition-colors ${
+                      className={`p-2 rounded-lg border text-center text-xs transition-colors flex flex-col items-center gap-1 ${
                         form.icon === opt.value
                           ? 'border-blue-500 bg-blue-50 text-blue-700'
                           : 'border-gray-200 hover:border-gray-300 text-gray-600'
                       }`}
                     >
-                      {opt.label}
+                      {(() => { const IconComp = ICON_MAP[opt.value]; return IconComp ? <IconComp className="h-5 w-5" /> : null })()}
+                      <span>{opt.label}</span>
                     </button>
                   ))}
                 </div>

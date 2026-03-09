@@ -18,7 +18,7 @@ class ChairController extends Controller
             ->allowedFilters(['key', 'name', 'active'])
             ->allowedSorts(['name', 'sort_order', 'created_at'])
             ->with(['treatments' => function ($query) {
-                $query->ordered()->with('subclasses');
+                $query->ordered()->with(['subclasses', 'subclassOptions']);
             }])
             ->ordered();
 
@@ -45,7 +45,7 @@ class ChairController extends Controller
     public function show(Chair $chair)
     {
         $chair->load(['treatments' => function ($query) {
-            $query->ordered()->with('subclasses');
+            $query->ordered()->with(['subclasses', 'subclassOptions']);
         }]);
 
         $stats = [
@@ -167,6 +167,14 @@ class ChairController extends Controller
                             'name' => $s->name,
                             'sort_order' => $s->sort_order,
                             'active' => (bool) $s->active,
+                        ])->values()->toArray()
+                        : [],
+                    'options' => $treatment->relationLoaded('subclassOptions')
+                        ? $treatment->subclassOptions->map(fn ($o) => [
+                            'id' => $o->id,
+                            'name' => $o->name,
+                            'sort_order' => $o->sort_order,
+                            'active' => (bool) $o->active,
                         ])->values()->toArray()
                         : [],
                 ];

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Chair;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class ChairController extends Controller
@@ -135,6 +137,57 @@ class ChairController extends Controller
         return response()->json(['message' => 'Cátedra eliminada correctamente']);
     }
 
+    /**
+     * Subir ícono personalizado para una cátedra
+     */
+    public function uploadIcon(Request $request, Chair $chair)
+    {
+        $request->validate([
+            'icon' => 'required|image|mimes:png,jpg,jpeg,webp,svg|max:2048',
+        ]);
+
+        // Eliminar ícono anterior si existe
+        if ($chair->icon_url) {
+            $oldPath = str_replace('/storage/', '', parse_url($chair->icon_url, PHP_URL_PATH));
+            if ($oldPath) {
+                Storage::disk('public')->delete($oldPath);
+            }
+        }
+
+        $file = $request->file('icon');
+        $fileName = Str::uuid() . '.' . $file->getClientOriginalExtension();
+        $directory = 'chairs/icons';
+        Storage::disk('public')->makeDirectory($directory);
+        $path = $file->storeAs($directory, $fileName, 'public');
+
+        $iconUrl = url(Storage::url($path));
+        $chair->update(['icon_url' => $iconUrl]);
+
+        return response()->json([
+            'message' => 'Ícono subido correctamente',
+            'data' => $this->formatChair($chair->load('treatments')),
+        ]);
+    }
+
+    /**
+     * Eliminar ícono personalizado de una cátedra
+     */
+    public function deleteIcon(Chair $chair)
+    {
+        if ($chair->icon_url) {
+            $oldPath = str_replace('/storage/', '', parse_url($chair->icon_url, PHP_URL_PATH));
+            if ($oldPath) {
+                Storage::disk('public')->delete($oldPath);
+            }
+            $chair->update(['icon_url' => null]);
+        }
+
+        return response()->json([
+            'message' => 'Ícono eliminado correctamente',
+            'data' => $this->formatChair($chair->load('treatments')),
+        ]);
+    }
+
     private function formatChair(Chair $chair): array
     {
         return [
@@ -143,6 +196,7 @@ class ChairController extends Controller
             'name' => $chair->name,
             'color' => $chair->color,
             'icon' => $chair->icon,
+            'icon_url' => $chair->icon_url,
             'description' => $chair->description,
             'sort_order' => $chair->sort_order,
             'active' => (bool) $chair->active,

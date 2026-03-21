@@ -467,7 +467,12 @@ export default function OdontogramScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Odontograma</Text>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backArrow}>
+            <Ionicons name="arrow-back" size={24} color="#1B2B5A" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Odontograma</Text>
+        </View>
 
         <Surface style={styles.infoCard}>
           <Text style={styles.infoText}>
@@ -583,7 +588,7 @@ export default function OdontogramScreen() {
                   <TouchableOpacity
                     key={procedure.id}
                     activeOpacity={0.7}
-                    onPress={() => (navigation as any).navigate('ProcedureView', { procedureId: procedure.id })}
+                    onPress={() => (navigation as any).navigate('AssignmentDetail', { procedureId: procedure.id })}
                   >
                     <Surface style={[
                       styles.procedureCard,
@@ -697,16 +702,7 @@ export default function OdontogramScreen() {
           )}
         </Surface>
 
-        {/* Botón Volver */}
-        <View style={styles.buttonContainer}>
-          <Button
-            mode="contained"
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            Volver
-          </Button>
-        </View>
+        <View style={styles.spacerBottom} />
       </ScrollView>
 
       {/* Modal de foto del odontograma */}
@@ -837,11 +833,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
+  headerRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingVertical: 8,
+    gap: 12,
+  },
+  backArrow: {
+    padding: 4,
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
+  },
+  spacerBottom: {
+    height: 24,
   },
   infoCard: {
     padding: 12,

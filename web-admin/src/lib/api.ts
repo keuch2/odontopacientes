@@ -109,6 +109,17 @@ export const api = {
 
     delete: (id: number) =>
       apiClient.delete<ApiResponse>(`/chairs/${id}`),
+
+    uploadIcon: (id: number, file: File) => {
+      const formData = new FormData()
+      formData.append('icon', file)
+      return apiClient.post<ApiResponse>(`/chairs/${id}/icon`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+    },
+
+    deleteIcon: (id: number) =>
+      apiClient.delete<ApiResponse>(`/chairs/${id}/icon`),
   },
 
   // Pacientes

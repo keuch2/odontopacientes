@@ -195,10 +195,15 @@ export default function PatientDetailScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.titleSection}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backArrow}>
+            <Ionicons name="arrow-back" size={24} color={colors.brandNavy} />
+          </TouchableOpacity>
           <AppText variant="h2" color="brandNavy" weight="bold">
             Ficha del Paciente
           </AppText>
+        </View>
+        <View style={styles.titleSection}>
           <View style={styles.actionButtons}>
             <TouchableOpacity 
               style={styles.smallActionButton}
@@ -361,7 +366,7 @@ export default function PatientDetailScreen({ navigation }: any) {
                 key={procedure.id}
                 style={styles.procedureCard}
                 onPress={() => {
-                  navigation.navigate('ProcedureView' as never, { procedureId: procedure.id } as never)
+                  navigation.navigate('AssignmentDetail' as never, { procedureId: procedure.id } as never)
                 }}
               >
                 <View style={styles.procedureHeader}>
@@ -472,9 +477,17 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.lg,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    gap: spacing.md,
+  },
+  backArrow: {
+    padding: spacing.xs,
+  },
   titleSection: {
     marginBottom: spacing.md,
-    paddingHorizontal: spacing.lg,
   },
   actionButtons: {
     flexDirection: 'row',

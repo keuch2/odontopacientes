@@ -228,6 +228,8 @@ Route::middleware('demo.auth')->group(function () {
     Route::post('/chairs', [\App\Http\Controllers\Api\ChairController::class, 'store']);
     Route::put('/chairs/{chair}', [\App\Http\Controllers\Api\ChairController::class, 'update']);
     Route::delete('/chairs/{chair}', [\App\Http\Controllers\Api\ChairController::class, 'destroy']);
+    Route::post('/chairs/{chair}/icon', [\App\Http\Controllers\Api\ChairController::class, 'uploadIcon']);
+    Route::delete('/chairs/{chair}/icon', [\App\Http\Controllers\Api\ChairController::class, 'deleteIcon']);
 
     // Treatments CRUD (admin)
     Route::post('/treatments', [\App\Http\Controllers\Api\TreatmentController::class, 'store']);

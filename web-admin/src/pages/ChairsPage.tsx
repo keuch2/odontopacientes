@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
-  Plus, ClipboardList, Loader2, Edit2, Trash2, X,
+  Plus, ClipboardList, Loader2, Edit2, Trash2, X, Upload,
   Scissors, HeartPulse, Bone, Syringe, Microscope,
   ShieldCheck, ScanFace, Baby, Paintbrush, Wrench, Circle,
+  Smartphone,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 
@@ -57,6 +58,39 @@ const emptyForm: ChairForm = {
   name: '', key: '', color: '#6366F1', icon: 'clipboard-list', description: '', active: true,
 }
 
+// Mobile preview component - simulates how the chair card looks in the app
+function MobilePreview({ color, iconUrl, iconPreviewUrl, name }: { color: string; iconUrl?: string; iconPreviewUrl?: string; name: string }) {
+  const previewSrc = iconPreviewUrl || iconUrl
+  return (
+    <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+      <div className="flex items-center gap-2 mb-3">
+        <Smartphone className="h-4 w-4 text-gray-500" />
+        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Vista previa en la app</span>
+      </div>
+      <div className="flex justify-center">
+        <div
+          className="w-36 h-36 rounded-xl flex flex-col items-center justify-center gap-2"
+          style={{ backgroundColor: color || '#6366F1' }}
+        >
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+          >
+            {previewSrc ? (
+              <img src={previewSrc} alt="Ícono" className="w-10 h-10 object-contain" />
+            ) : (
+              <ClipboardList className="w-10 h-10 text-white/80" />
+            )}
+          </div>
+          <span className="text-white font-semibold text-sm text-center px-2 leading-tight">
+            {name || 'Cátedra'}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function ChairsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -64,6 +98,10 @@ export default function ChairsPage() {
   const [editingChair, setEditingChair] = useState<any>(null)
   const [form, setForm] = useState<ChairForm>(emptyForm)
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
+  const [iconFile, setIconFile] = useState<File | null>(null)
+  const [iconPreviewUrl, setIconPreviewUrl] = useState<string | null>(null)
+  const [existingIconUrl, setExistingIconUrl] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: chairsData, isLoading } = useQuery({
     queryKey: ['chairs'],
@@ -72,7 +110,11 @@ export default function ChairsPage() {
 
   const createMutation = useMutation({
     mutationFn: (data: any) => api.chairs.create(data),
-    onSuccess: () => {
+    onSuccess: async (response) => {
+      const chairId = response.data?.data?.id
+      if (iconFile && chairId) {
+        await api.chairs.uploadIcon(chairId, iconFile)
+      }
       queryClient.invalidateQueries({ queryKey: ['chairs'] })
       closeModal()
     },
@@ -80,7 +122,10 @@ export default function ChairsPage() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) => api.chairs.update(id, data),
-    onSuccess: () => {
+    onSuccess: async () => {
+      if (iconFile && editingChair) {
+        await api.chairs.uploadIcon(editingChair.id, iconFile)
+      }
       queryClient.invalidateQueries({ queryKey: ['chairs'] })
       closeModal()
     },
@@ -94,11 +139,22 @@ export default function ChairsPage() {
     },
   })
 
+  const deleteIconMutation = useMutation({
+    mutationFn: (id: number) => api.chairs.deleteIcon(id),
+    onSuccess: () => {
+      setExistingIconUrl(null)
+      queryClient.invalidateQueries({ queryKey: ['chairs'] })
+    },
+  })
+
   const chairs = Array.isArray(chairsData?.data?.data) ? chairsData.data.data : []
 
   const openCreate = () => {
     setEditingChair(null)
     setForm(emptyForm)
+    setIconFile(null)
+    setIconPreviewUrl(null)
+    setExistingIconUrl(null)
     setShowModal(true)
   }
 
@@ -112,6 +168,9 @@ export default function ChairsPage() {
       description: chair.description || '',
       active: chair.active ?? true,
     })
+    setIconFile(null)
+    setIconPreviewUrl(null)
+    setExistingIconUrl(chair.icon_url || null)
     setShowModal(true)
   }
 
@@ -119,6 +178,27 @@ export default function ChairsPage() {
     setShowModal(false)
     setEditingChair(null)
     setForm(emptyForm)
+    setIconFile(null)
+    setIconPreviewUrl(null)
+    setExistingIconUrl(null)
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setIconFile(file)
+      const url = URL.createObjectURL(file)
+      setIconPreviewUrl(url)
+    }
+  }
+
+  const handleRemoveCustomIcon = () => {
+    setIconFile(null)
+    setIconPreviewUrl(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    if (editingChair && existingIconUrl) {
+      deleteIconMutation.mutate(editingChair.id)
+    }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -131,6 +211,9 @@ export default function ChairsPage() {
   }
 
   const isSaving = createMutation.isPending || updateMutation.isPending
+
+  // Determine what icon is currently active for preview
+  const hasCustomIcon = !!iconPreviewUrl || !!existingIconUrl
 
   if (isLoading) {
     return (
@@ -171,10 +254,12 @@ export default function ChairsPage() {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center">
                     <div
-                      className="h-12 w-12 rounded-lg flex items-center justify-center"
+                      className="h-12 w-12 rounded-lg flex items-center justify-center overflow-hidden"
                       style={{ backgroundColor: chair.color || '#6366F1' }}
                     >
-                      {(() => { const IC = ICON_MAP[chair.icon]; return IC ? <IC className="h-6 w-6 text-white" /> : <ClipboardList className="h-6 w-6 text-white" /> })()}
+                      {chair.icon_url ? (
+                        <img src={chair.icon_url} alt="" className="h-7 w-7 object-contain" />
+                      ) : (() => { const IC = ICON_MAP[chair.icon]; return IC ? <IC className="h-6 w-6 text-white" /> : <ClipboardList className="h-6 w-6 text-white" /> })()}
                     </div>
                     <div className="ml-3">
                       <h3 className="text-lg font-semibold text-slate-900">{chair.name}</h3>
@@ -246,7 +331,7 @@ export default function ChairsPage() {
       {/* Create/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b">
               <h2 className="text-xl font-bold text-slate-900">
                 {editingChair ? 'Editar Cátedra' : 'Nueva Cátedra'}
@@ -255,100 +340,167 @@ export default function ChairsPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={e => setForm({ ...form, name: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                  placeholder="Ej: Cirugía Bucal"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Clave (key) *</label>
-                <input
-                  type="text"
-                  value={form.key}
-                  onChange={e => setForm({ ...form, key: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                  maxLength={20}
-                  placeholder="Ej: cirugia-bucal"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-                <textarea
-                  value={form.description}
-                  onChange={e => setForm({ ...form, description: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  rows={2}
-                  placeholder="Descripción de la cátedra..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
-                <div className="flex flex-wrap gap-2">
-                  {COLOR_PRESETS.map(color => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => setForm({ ...form, color })}
-                      className={`w-8 h-8 rounded-lg border-2 transition-transform ${
-                        form.color === color ? 'border-gray-900 scale-110' : 'border-transparent'
-                      }`}
-                      style={{ backgroundColor: color }}
+            <form onSubmit={handleSubmit} className="p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                {/* Left column - Form fields */}
+                <div className="lg:col-span-3 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={e => setForm({ ...form, name: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                      placeholder="Ej: Cirugía Bucal"
                     />
-                  ))}
-                  <input
-                    type="color"
-                    value={form.color}
-                    onChange={e => setForm({ ...form, color: e.target.value })}
-                    className="w-8 h-8 rounded cursor-pointer"
-                    title="Color personalizado"
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Clave (key) *</label>
+                    <input
+                      type="text"
+                      value={form.key}
+                      onChange={e => setForm({ ...form, key: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                      maxLength={20}
+                      placeholder="Ej: cirugia-bucal"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                    <textarea
+                      value={form.description}
+                      onChange={e => setForm({ ...form, description: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      rows={2}
+                      placeholder="Descripción de la cátedra..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
+                    <div className="flex flex-wrap gap-2">
+                      {COLOR_PRESETS.map(color => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setForm({ ...form, color })}
+                          className={`w-8 h-8 rounded-lg border-2 transition-transform ${
+                            form.color === color ? 'border-gray-900 scale-110' : 'border-transparent'
+                          }`}
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                      <input
+                        type="color"
+                        value={form.color}
+                        onChange={e => setForm({ ...form, color: e.target.value })}
+                        className="w-8 h-8 rounded cursor-pointer"
+                        title="Color personalizado"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Ícono personalizado</label>
+                    {hasCustomIcon ? (
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div
+                          className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
+                          style={{ backgroundColor: form.color || '#6366F1' }}
+                        >
+                          <img
+                            src={iconPreviewUrl || existingIconUrl || ''}
+                            alt="Ícono"
+                            className="w-7 h-7 object-contain"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-700 truncate">
+                            {iconFile ? iconFile.name : 'Ícono personalizado'}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {iconFile ? `${(iconFile.size / 1024).toFixed(1)} KB` : 'Subido anteriormente'}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRemoveCustomIcon}
+                          className="text-red-500 hover:text-red-700 p-1"
+                          title="Eliminar ícono"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
+                      >
+                        <Upload className="h-5 w-5" />
+                        <span className="text-sm font-medium">Subir ícono (PNG, JPG, SVG, WebP)</span>
+                      </button>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </div>
+
+                  {!hasCustomIcon && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">O elegir ícono predefinido</label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {ICON_OPTIONS.map(opt => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setForm({ ...form, icon: opt.value })}
+                            className={`p-2 rounded-lg border text-center text-xs transition-colors flex flex-col items-center gap-1 ${
+                              form.icon === opt.value
+                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                            }`}
+                          >
+                            {(() => { const IconComp = ICON_MAP[opt.value]; return IconComp ? <IconComp className="h-5 w-5" /> : null })()}
+                            <span>{opt.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="chair-active"
+                      checked={form.active}
+                      onChange={e => setForm({ ...form, active: e.target.checked })}
+                      className="rounded border-gray-300"
+                    />
+                    <label htmlFor="chair-active" className="text-sm text-gray-700">Cátedra activa</label>
+                  </div>
+                </div>
+
+                {/* Right column - Mobile Preview */}
+                <div className="lg:col-span-2">
+                  <MobilePreview
+                    color={form.color}
+                    iconUrl={existingIconUrl || undefined}
+                    iconPreviewUrl={iconPreviewUrl || undefined}
+                    name={form.name}
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Ícono</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {ICON_OPTIONS.map(opt => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setForm({ ...form, icon: opt.value })}
-                      className={`p-2 rounded-lg border text-center text-xs transition-colors flex flex-col items-center gap-1 ${
-                        form.icon === opt.value
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-600'
-                      }`}
-                    >
-                      {(() => { const IconComp = ICON_MAP[opt.value]; return IconComp ? <IconComp className="h-5 w-5" /> : null })()}
-                      <span>{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="chair-active"
-                  checked={form.active}
-                  onChange={e => setForm({ ...form, active: e.target.checked })}
-                  className="rounded border-gray-300"
-                />
-                <label htmlFor="chair-active" className="text-sm text-gray-700">Cátedra activa</label>
-              </div>
-
-              <div className="flex gap-3 pt-4 border-t">
+              <div className="flex gap-3 pt-4 mt-4 border-t">
                 <button type="button" onClick={closeModal} className="btn btn-outline flex-1">
                   Cancelar
                 </button>

@@ -14,6 +14,7 @@ interface Chair {
   name: string
   key: string
   color: string
+  icon_url?: string | null
 }
 
 interface PatientSearchResult {
@@ -124,8 +125,11 @@ export default function CatedrasScreen({ navigation }: any) {
   // Mostrar pacientes si hay texto de búsqueda, sino mostrar cátedras
   const shouldShowPatients = searchText.trim().length > 0 || !!selectedTooth
 
-  // Obtener icono para una cátedra basado en su key o nombre
-  const getChairIcon = (chair: Chair) => {
+  // Obtener icono para una cátedra: icon_url remoto > hardcoded PNG por key
+  const getChairIcon = (chair: Chair): { uri: string } | number => {
+    if (chair.icon_url) {
+      return { uri: chair.icon_url }
+    }
     const key = (chair.key || chair.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     return catedraIcons[key] || defaultIcon
   }

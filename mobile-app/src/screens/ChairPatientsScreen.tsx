@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react'
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
-import { AppText, AppCard } from '../components/ui'
+import { Ionicons } from '@expo/vector-icons'
+import { AppText } from '../components/ui'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
 import { api } from '../lib/api'
@@ -94,16 +95,13 @@ export default function ChairPatientsScreen({ route, navigation }: any) {
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Título y botón volver */}
-        <View style={styles.titleContainer}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backArrow}>
+            <Ionicons name="arrow-back" size={24} color={colors.brandNavy} />
+          </TouchableOpacity>
           <AppText variant="h2" color="brandNavy" weight="bold">
             {chairName}
           </AppText>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <AppText color="white" weight="semibold">Volver</AppText>
-          </TouchableOpacity>
         </View>
 
         {isLoading ? (
@@ -158,23 +156,25 @@ export default function ChairPatientsScreen({ route, navigation }: any) {
         {/* Lista de pacientes */}
         {filteredPatients.length > 0 ? (
           filteredPatients.map((patient) => (
-          <TouchableOpacity 
+          <TouchableOpacity
             key={patient.id}
+            style={styles.patientCard}
             onPress={() => navigation.navigate('PatientDetail', { patientId: patient.id })}
           >
-            <AppCard style={styles.patientCard} padding="lg">
-              <View style={styles.nameRow}>
-                <AppText variant="h3" color="white" weight="bold" style={styles.patientNameFlex}>
-                  {patient.name}
-                </AppText>
+              <View style={styles.cardHeader}>
+                <View style={{ flex: 1 }}>
+                  <AppText variant="h3" color="brandNavy" weight="bold">
+                    {patient.name}
+                  </AppText>
+                </View>
                 {patient.isPediatric && (
                   <View style={styles.pediatricBadge}>
                     <AppText color="white" weight="semibold" style={styles.pediatricText}>Pediátrico</AppText>
                   </View>
                 )}
               </View>
-              <AppText color="white" style={styles.patientInfo}>
-                {patient.age} años • {patient.city} • {patient.university}
+              <AppText color="textSecondary" style={styles.patientInfo}>
+                {patient.age} años • {patient.city}{patient.university ? ` • ${patient.university}` : ''}
               </AppText>
               <View style={styles.statusContainer}>
                 <View style={styles.statusBadge}>
@@ -193,7 +193,9 @@ export default function ChairPatientsScreen({ route, navigation }: any) {
                   </AppText>
                 </View>
               </View>
-            </AppCard>
+              <View style={styles.cardFooter}>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </View>
           </TouchableOpacity>
         ))
         ) : (
@@ -221,18 +223,14 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.lg,
   },
-  titleContainer: {
+  headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
+    paddingVertical: spacing.md,
+    gap: spacing.md,
   },
-  backButton: {
-    backgroundColor: colors.brandNavy,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: 8,
+  backArrow: {
+    padding: spacing.xs,
   },
   filterTitle: {
     marginBottom: spacing.sm,
@@ -274,20 +272,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   patientCard: {
-    backgroundColor: colors.brandTurquoise,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: spacing.md,
     marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  nameRow: {
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.xs,
     gap: spacing.sm,
   },
-  patientName: {
-    flex: 1,
-  },
-  patientNameFlex: {
-    flex: 1,
+  cardFooter: {
+    alignItems: 'flex-end',
+    marginTop: spacing.sm,
   },
   pediatricBadge: {
     backgroundColor: '#F59E0B',

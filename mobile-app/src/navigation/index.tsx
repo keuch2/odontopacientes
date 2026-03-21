@@ -15,7 +15,6 @@ import NotificationsScreen from '../screens/NotificationsScreen'
 import SettingsScreen from '../screens/SettingsScreen'
 import PatientsScreen from '../screens/PatientsScreen'
 import PatientDetailScreen from '../screens/PatientDetailScreen'
-import ProcedureViewScreen from '../screens/ProcedureViewScreen'
 import ProcedureScheduleScreen from '../screens/ProcedureScheduleScreen'
 import RegisterStep1Screen from '../screens/RegisterStep1Screen'
 import RegisterStep2Screen from '../screens/RegisterStep2Screen'
@@ -59,13 +58,8 @@ function CatedrasStack() {
         component={PatientDetailScreen}
         options={{ title: 'Ficha del Paciente' }}
       />
-      <Stack.Screen 
-        name="ProcedureView" 
-        component={ProcedureViewScreen}
-        options={{ title: 'Ver Procedimiento' }}
-      />
-      <Stack.Screen 
-        name="ProcedureSchedule" 
+      <Stack.Screen
+        name="ProcedureSchedule"
         component={ProcedureScheduleScreen}
         options={{ title: 'Agendar Procedimiento' }}
       />
@@ -116,9 +110,13 @@ function CatedrasStack() {
 // Stack Navigator para Pacientes
 function PatientsStack() {
   return (
-    <Stack.Navigator>
-      <Stack.Screen 
-        name="PatientsList" 
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen
+        name="PatientsList"
         component={PatientsScreen}
         options={{ title: 'Pacientes' }}
       />
@@ -127,15 +125,25 @@ function PatientsStack() {
         component={PatientDetailScreen}
         options={{ title: 'Detalle del Paciente' }}
       />
-      <Stack.Screen 
-        name="CreateProcedure" 
+      <Stack.Screen
+        name="CreateProcedure"
         component={CreateProcedureScreen}
         options={{ title: 'Agregar Procedimiento' }}
       />
-      <Stack.Screen 
-        name="ProcedureView" 
-        component={ProcedureViewScreen}
-        options={{ title: 'Ver Procedimiento' }}
+      <Stack.Screen
+        name="AssignmentDetail"
+        component={AssignmentDetailScreen}
+        options={{ title: 'Procedimiento' }}
+      />
+      <Stack.Screen
+        name="Odontogram"
+        component={OdontogramScreen}
+        options={{ title: 'Odontograma' }}
+      />
+      <Stack.Screen
+        name="EditPatient"
+        component={EditPatientScreen}
+        options={{ title: 'Editar Paciente' }}
       />
     </Stack.Navigator>
   )
@@ -159,25 +167,25 @@ function MyPatientsStack() {
         component={AssignmentDetailScreen}
         options={{ title: 'Detalle de Asignación' }}
       />
-      <Stack.Screen 
-        name="Odontogram" 
+      <Stack.Screen
+        name="Odontogram"
         component={OdontogramScreen}
         options={{ title: 'Odontograma' }}
       />
-      <Stack.Screen 
-        name="ProcedureView" 
-        component={ProcedureViewScreen}
-        options={{ title: 'Ver Procedimiento' }}
-      />
-      <Stack.Screen 
-        name="PatientDetail" 
+      <Stack.Screen
+        name="PatientDetail"
         component={PatientDetailScreen}
         options={{ title: 'Ficha del Paciente' }}
       />
-      <Stack.Screen 
-        name="CreateProcedure" 
+      <Stack.Screen
+        name="CreateProcedure"
         component={CreateProcedureScreen}
         options={{ title: 'Agregar Procedimiento' }}
+      />
+      <Stack.Screen
+        name="EditPatient"
+        component={EditPatientScreen}
+        options={{ title: 'Editar Paciente' }}
       />
     </Stack.Navigator>
   )
@@ -216,13 +224,13 @@ function AddStack() {
         component={PatientDetailScreen}
         options={{ title: 'Ficha del Paciente' }}
       />
-      <Stack.Screen 
-        name="ProcedureView" 
-        component={ProcedureViewScreen}
-        options={{ title: 'Ver Procedimiento' }}
+      <Stack.Screen
+        name="AssignmentDetail"
+        component={AssignmentDetailScreen}
+        options={{ title: 'Procedimiento' }}
       />
-      <Stack.Screen 
-        name="CreateProcedure" 
+      <Stack.Screen
+        name="CreateProcedure"
         component={CreateProcedureScreen}
         options={{ title: 'Agregar Procedimiento' }}
       />

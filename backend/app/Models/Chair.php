@@ -16,6 +16,7 @@ class Chair extends Model
         'name',
         'color',
         'icon',
+        'icon_url',
         'description',
         'sort_order',
         'active',

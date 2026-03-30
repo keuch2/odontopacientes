@@ -103,6 +103,7 @@ export default function PatientDetailScreen({ navigation }: any) {
     return (proceduresData || []).map((proc: any) => ({
       id: proc.id,
       name: `${proc.treatment?.name || 'Procedimiento'} ${proc.tooth_description ? `(${proc.tooth_description})` : ''}`,
+      subclass: proc.treatment_subclass?.name || null,
       status: proc.status as 'disponible' | 'proceso' | 'finalizado',
       date: proc.updated_at ? new Date(proc.updated_at).toLocaleDateString('es-PY') : null,
       chairName: proc.chair?.name || '',
@@ -374,6 +375,9 @@ export default function PatientDetailScreen({ navigation }: any) {
                     <AppText variant="body" color="brandNavy" weight="bold">
                       {procedure.name}
                     </AppText>
+                    {procedure.subclass ? (
+                      <AppText variant="caption" color="brandTurquoise" weight="semibold" style={{ marginTop: 2 }}>{procedure.subclass}</AppText>
+                    ) : null}
                     {procedure.chairName ? (
                       <AppText variant="caption" color="textMuted">{procedure.chairName}</AppText>
                     ) : null}

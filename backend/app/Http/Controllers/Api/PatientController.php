@@ -79,6 +79,15 @@ class PatientController extends Controller
                         'proceso' => $patient->patientProcedures()->where('status', 'proceso')->count(),
                         'finalizado' => $patient->patientProcedures()->where('status', 'finalizado')->count(),
                     ],
+                    'treatments' => $patient->patientProcedures()
+                        ->with('treatment')
+                        ->get()
+                        ->pluck('treatment.name')
+                        ->filter()
+                        ->unique()
+                        ->values()
+                        ->map(fn ($name) => ['name' => $name])
+                        ->toArray(),
                     'university_registered_at' => $patient->university_registered_at,
                     'created_at' => $patient->created_at,
                 ];

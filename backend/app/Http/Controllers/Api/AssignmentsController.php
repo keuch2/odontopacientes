@@ -16,15 +16,21 @@ class AssignmentsController extends Controller
         
         // Si no hay usuario en el request, usar DemoUserFactory como fallback
         if (!$user) {
-            $authHeader = $request->header('Authorization');
-            if ($authHeader && str_starts_with($authHeader, 'Bearer ')) {
-                $token = substr($authHeader, 7);
-                $email = base64_decode(str_replace(['-', '_'], ['+', '/'], substr($token, 11)));
-                $user = DemoUserFactory::getUserByEmail($email);
+            try {
+                $authHeader = $request->header('Authorization');
+                if ($authHeader && str_starts_with($authHeader, 'Bearer ')) {
+                    $token = substr($authHeader, 7);
+                    $email = base64_decode(str_replace(['-', '_'], ['+', '/'], substr($token, 11)));
+                    if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        $user = DemoUserFactory::getUserByEmail($email);
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::warning('myAssignments: token parsing failed', ['error' => $e->getMessage()]);
             }
         }
         
-        if (!$user || $user['role'] !== 'alumno') {
+        if (!$user || !in_array($user['role'] ?? '', ['alumno', 'admin', 'coordinador'])) {
             return response()->json([
                 'message' => 'No autorizado',
                 'data' => []
@@ -120,11 +126,17 @@ class AssignmentsController extends Controller
         $user = $request->attributes->get('demo_user');
         
         if (!$user) {
-            $authHeader = $request->header('Authorization');
-            if ($authHeader && str_starts_with($authHeader, 'Bearer ')) {
-                $token = substr($authHeader, 7);
-                $email = base64_decode(str_replace(['-', '_'], ['+', '/'], substr($token, 11)));
-                $user = DemoUserFactory::getUserByEmail($email);
+            try {
+                $authHeader = $request->header('Authorization');
+                if ($authHeader && str_starts_with($authHeader, 'Bearer ')) {
+                    $token = substr($authHeader, 7);
+                    $email = base64_decode(str_replace(['-', '_'], ['+', '/'], substr($token, 11)));
+                    if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        $user = DemoUserFactory::getUserByEmail($email);
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::warning('assignment show: token parsing failed', ['error' => $e->getMessage()]);
             }
         }
         

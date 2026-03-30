@@ -22,11 +22,22 @@ class PatientController extends Controller
             ->allowedSorts(['first_name', 'last_name', 'created_at', 'birthdate'])
             ->with(['faculty.university', 'createdBy'])
             ->when($request->q, function ($query, $search) {
-                return $query->searchByName($search);
+                return $query->where(function ($q) use ($search) {
+                    $q->where(function ($nameQ) use ($search) {
+                        $nameQ->searchByName($search);
+                    })->orWhereHas('patientProcedures.treatment', function ($treatQ) use ($search) {
+                        $treatQ->where('name', 'LIKE', "%{$search}%");
+                    });
+                });
             })
             ->when($request->chair_id, function ($query, $chairId) {
                 return $query->whereHas('patientProcedures', function ($q) use ($chairId) {
-                    $q->where('chair_id', $chairId);
+                    $q->where(function ($sub) use ($chairId) {
+                        $sub->where('chair_id', $chairId)
+                            ->orWhereHas('treatment', function ($t) use ($chairId) {
+                                $t->where('chair_id', $chairId);
+                            });
+                    });
                 });
             })
             ->when($request->treatments, function ($query, $treatments) {
@@ -36,7 +47,7 @@ class PatientController extends Controller
             })
             ->when($request->tooth_fdi, function ($query, $toothFdi) {
                 return $query->whereHas('patientProcedures', function ($q) use ($toothFdi) {
-                    $q->where('tooth_description', 'LIKE', "%Diente {$toothFdi}%");
+                    $q->where('tooth_fdi', $toothFdi);
                 });
             })
             ->paginate($request->per_page ?? 15);

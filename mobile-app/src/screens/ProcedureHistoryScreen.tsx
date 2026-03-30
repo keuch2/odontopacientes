@@ -24,6 +24,14 @@ interface Assignment {
       name: string
       estimated_sessions: number
     }
+    treatment_subclass?: {
+      id: number
+      name: string
+    } | null
+    treatment_subclass_option?: {
+      id: number
+      name: string
+    } | null
     chair: {
       id: number
       name: string
@@ -67,6 +75,7 @@ export default function ProcedureHistoryScreen() {
       const response = await api.students.getMyAssignments()
       return response.data.data as Assignment[]
     },
+    retry: 2,
   })
 
   const filteredProcedures = data?.filter((assignment) => {
@@ -112,6 +121,11 @@ export default function ProcedureHistoryScreen() {
             <AppText variant="h3" weight="bold" color="brandNavy" numberOfLines={1}>
               {item.patient_procedure.treatment.name}
             </AppText>
+            {item.patient_procedure.treatment_subclass?.name ? (
+              <AppText variant="caption" color="brandTurquoise" weight="semibold" numberOfLines={1}>
+                {item.patient_procedure.treatment_subclass.name}
+              </AppText>
+            ) : null}
             <AppText variant="body" color="textSecondary" numberOfLines={1}>
               {item.patient_procedure.patient.full_name}
             </AppText>

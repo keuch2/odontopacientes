@@ -1114,8 +1114,6 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
                 </TouchableOpacity>
               </View>
             </View>
-            {showDatePicker && <DateTimePicker value={sessionDate} mode="date" display="default" onChange={onDateChange} />}
-            {showTimePicker && <DateTimePicker value={sessionDate} mode="time" display="default" onChange={onTimeChange} />}
             <View style={styles.inputContainer}>
               <AppText style={styles.inputLabel}>Notas (Opcional)</AppText>
               <TextInput style={styles.textArea} value={sessionNotes} onChangeText={setSessionNotes} placeholder="Observaciones de la sesión..." multiline numberOfLines={3} textAlignVertical="top" />
@@ -1150,8 +1148,6 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
                 </TouchableOpacity>
               </View>
             </View>
-            {showDatePicker && <DateTimePicker value={sessionDate} mode="date" display="default" onChange={onDateChange} />}
-            {showTimePicker && <DateTimePicker value={sessionDate} mode="time" display="default" onChange={onTimeChange} />}
             <View style={styles.inputContainer}>
               <AppText style={styles.inputLabel}>Notas (Opcional)</AppText>
               <TextInput style={styles.textArea} value={sessionNotes} onChangeText={setSessionNotes} placeholder="Observaciones de la sesión..." multiline numberOfLines={3} textAlignVertical="top" />
@@ -1266,6 +1262,53 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
           </View>
         </View>
       </Modal>
+
+      {/* DateTimePicker in its own Modal to avoid iOS rendering issues inside other modals */}
+      {Platform.OS === 'ios' ? (
+        <Modal visible={showDatePicker || showTimePicker} transparent animationType="slide">
+          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }}>
+            <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 30 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <TouchableOpacity onPress={() => { setShowDatePicker(false); setShowTimePicker(false) }}>
+                  <AppText color="error" weight="semibold">Cancelar</AppText>
+                </TouchableOpacity>
+                <AppText weight="bold" color="brandNavy">{showDatePicker ? 'Seleccionar Fecha' : 'Seleccionar Hora'}</AppText>
+                <TouchableOpacity onPress={() => { setShowDatePicker(false); setShowTimePicker(false) }}>
+                  <AppText color="brandTurquoise" weight="semibold">Listo</AppText>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={sessionDate}
+                mode={showDatePicker ? 'date' : 'time'}
+                display="spinner"
+                onChange={(event: any, date?: Date) => {
+                  if (date) {
+                    if (showDatePicker) {
+                      const newDate = new Date(sessionDate)
+                      newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate())
+                      setSessionDate(newDate)
+                    } else {
+                      const newDate = new Date(sessionDate)
+                      newDate.setHours(date.getHours(), date.getMinutes())
+                      setSessionDate(newDate)
+                    }
+                  }
+                }}
+                style={{ height: 200 }}
+              />
+            </View>
+          </View>
+        </Modal>
+      ) : (
+        <>
+          {showDatePicker && (
+            <DateTimePicker value={sessionDate} mode="date" display="default" onChange={onDateChange} />
+          )}
+          {showTimePicker && (
+            <DateTimePicker value={sessionDate} mode="time" display="default" onChange={onTimeChange} />
+          )}
+        </>
+      )}
     </View>
   )
 }

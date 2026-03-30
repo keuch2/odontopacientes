@@ -141,6 +141,44 @@ export default function AddProcedureModal({
     }
   };
 
+  // Check if any selected teeth are wisdom teeth (18, 28, 38, 48)
+  const WISDOM_TEETH = ['18', '28', '38', '48'];
+  const teethForCheck = selectedTeeth && selectedTeeth.length > 0
+    ? selectedTeeth
+    : toothFdiInput.trim() ? toothFdiInput.split(',').map(t => t.trim()).filter(Boolean) : [];
+  const hasWisdomTooth = teethForCheck.some(t => WISDOM_TEETH.includes(t));
+
+  const handleMarkAbsent = async () => {
+    const teethToUse = selectedTeeth && selectedTeeth.length > 0
+      ? selectedTeeth
+      : toothFdiInput.trim() ? toothFdiInput.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+    if (teethToUse.length === 0) {
+      Alert.alert('Error', 'Debes indicar al menos un diente');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      for (const toothFdi of teethToUse) {
+        await api.procedures.createForPatient(patientId, {
+          tooth_fdi: toothFdi,
+          status: 'ausente',
+          notes: 'Diente ausente',
+        });
+      }
+      Alert.alert('Éxito', `${teethToUse.length} diente(s) marcado(s) como ausente(s)`);
+      resetForm();
+      onSuccess();
+      onDismiss();
+    } catch (error: any) {
+      console.error('Error marking absent:', error);
+      Alert.alert('Error', error.response?.data?.message || 'No se pudo marcar como ausente');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     // Determine teeth to use
     const teethToUse = selectedTeeth && selectedTeeth.length > 0
@@ -325,6 +363,22 @@ export default function AddProcedureModal({
                     />
                   </View>
                 )}
+
+                {/* Mark as Absent button for wisdom teeth */}
+                {hasWisdomTooth && (
+                  <TouchableOpacity
+                    style={styles.absentButton}
+                    onPress={handleMarkAbsent}
+                    disabled={loading}
+                  >
+                    <Ionicons name="close-circle-outline" size={20} color="#fff" />
+                    <Text style={styles.absentButtonText}>
+                      Marcar como Ausente (sin procedimiento)
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                <Divider style={{ marginVertical: 12 }} />
 
                 {/* Chair Selector */}
                 <View style={styles.field}>
@@ -895,5 +949,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600' as const,
     color: '#1D4ED8',
+  },
+  absentButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: '#9CA3AF',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 12,
+    gap: 8,
+  },
+  absentButtonText: {
+    color: '#fff',
+    fontWeight: '600' as const,
+    fontSize: 14,
   },
 });

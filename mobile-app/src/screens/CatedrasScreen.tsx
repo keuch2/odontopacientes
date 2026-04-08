@@ -53,6 +53,8 @@ const defaultIcon = require('../../assets/images/catedras/operatoria.png')
 export default function CatedrasScreen({ navigation }: any) {
   const [searchText, setSearchText] = useState('')
   const [selectedTooth, setSelectedTooth] = useState<string | null>(null)
+  const [selectedChairId, setSelectedChairId] = useState<number | null>(null)
+  const [selectedChairName, setSelectedChairName] = useState<string | null>(null)
   const debouncedSearchText = useDebounce(searchText, 500)
 
   // Cargar banners publicitarios desde la API
@@ -95,16 +97,17 @@ export default function CatedrasScreen({ navigation }: any) {
 
   // Buscar pacientes cuando hay texto de búsqueda
   const { data: searchResults, isLoading: isSearching, error: searchError } = useQuery({
-    queryKey: ['patients-search', debouncedSearchText, selectedTooth],
+    queryKey: ['patients-search', debouncedSearchText, selectedTooth, selectedChairId],
     queryFn: async () => {
-      if (!debouncedSearchText.trim() && !selectedTooth) return []
+      if (!debouncedSearchText.trim() && !selectedTooth && !selectedChairId) return []
       const params: any = {}
       if (debouncedSearchText.trim()) params.q = debouncedSearchText
       if (selectedTooth) params.tooth_fdi = selectedTooth
+      if (selectedChairId) params.chair_id = selectedChairId
       const response = await api.patients.search(params)
       return response.data.data || []
     },
-    enabled: debouncedSearchText.trim().length > 0 || !!selectedTooth,
+    enabled: debouncedSearchText.trim().length > 0 || !!selectedTooth || !!selectedChairId,
   })
 
   // Transformar datos de búsqueda al formato esperado por PatientCard
@@ -123,7 +126,7 @@ export default function CatedrasScreen({ navigation }: any) {
   }))
 
   // Mostrar pacientes si hay texto de búsqueda, sino mostrar cátedras
-  const shouldShowPatients = searchText.trim().length > 0 || !!selectedTooth
+  const shouldShowPatients = searchText.trim().length > 0 || !!selectedTooth || !!selectedChairId
 
   // Obtener icono para una cátedra: icon_url remoto > hardcoded PNG por key
   const getChairIcon = (chair: Chair): { uri: string } | number => {
@@ -139,10 +142,15 @@ export default function CatedrasScreen({ navigation }: any) {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Barra de búsqueda */}
         <View style={styles.searchWrapper}>
-          <SearchBar 
+          <SearchBar
             value={searchText}
             onChangeText={setSearchText}
             placeholder="Buscar pacientes, cátedras, tratamientos..."
+            showChairFilter
+            chairs={chairsData || []}
+            selectedChairId={selectedChairId}
+            selectedChairName={selectedChairName}
+            onChairChange={(id, name) => { setSelectedChairId(id); setSelectedChairName(name) }}
             showToothFilter
             selectedTooth={selectedTooth}
             onToothChange={setSelectedTooth}

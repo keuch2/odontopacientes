@@ -50,6 +50,11 @@ class PatientController extends Controller
                     $q->where('tooth_fdi', $toothFdi);
                 });
             })
+            ->when($request->treatment_subclass_id, function ($query, $subclassId) {
+                return $query->whereHas('patientProcedures', function ($q) use ($subclassId) {
+                    $q->where('treatment_subclass_id', $subclassId);
+                });
+            })
             ->paginate($request->per_page ?? 15);
 
         return response()->json([

@@ -200,6 +200,7 @@ class ApiClient {
       city?: string
       treatments?: number[]
       tooth_fdi?: string
+      treatment_subclass_id?: number
       page?: number
       per_page?: number
     }): Promise<AxiosResponse<PaginatedResponse<Patient>>> =>

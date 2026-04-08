@@ -1,16 +1,16 @@
 import React, { useState } from 'react'
-import { View, TextInput, StyleSheet, TouchableOpacity, Modal, ScrollView, FlatList } from 'react-native'
+import { View, TextInput, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
 import { AppText } from './ui'
+import { ToothPickerModal } from './ToothPickerModal'
 
-const ALL_TEETH = [
-  18, 17, 16, 15, 14, 13, 12, 11,
-  21, 22, 23, 24, 25, 26, 27, 28,
-  48, 47, 46, 45, 44, 43, 42, 41,
-  31, 32, 33, 34, 35, 36, 37, 38,
-]
+interface ChairOption {
+  id: number
+  name: string
+  color?: string
+}
 
 interface SearchBarProps {
   placeholder?: string
@@ -21,9 +21,14 @@ interface SearchBarProps {
   showToothFilter?: boolean
   selectedTooth?: string | null
   onToothChange?: (tooth: string | null) => void
+  showChairFilter?: boolean
+  chairs?: ChairOption[]
+  selectedChairId?: number | null
+  selectedChairName?: string | null
+  onChairChange?: (id: number | null, name: string | null) => void
 }
 
-export function SearchBar({ 
+export function SearchBar({
   placeholder = 'Buscar materias, pacientes, procedimientos, etc',
   value,
   onChangeText,
@@ -32,21 +37,27 @@ export function SearchBar({
   showToothFilter = false,
   selectedTooth = null,
   onToothChange,
+  showChairFilter = false,
+  chairs = [],
+  selectedChairId = null,
+  selectedChairName = null,
+  onChairChange,
 }: SearchBarProps) {
   const [toothModalVisible, setToothModalVisible] = useState(false)
+  const [chairModalVisible, setChairModalVisible] = useState(false)
 
-  const handleToothSelect = (tooth: number | null) => {
-    onToothChange?.(tooth ? tooth.toString() : null)
-    setToothModalVisible(false)
+  const handleChairSelect = (id: number | null, name: string | null) => {
+    onChairChange?.(id, name)
+    setChairModalVisible(false)
   }
 
   return (
     <>
       <View style={styles.container}>
-        <Ionicons 
-          name="search" 
-          size={20} 
-          color={colors.textMuted} 
+        <Ionicons
+          name="search"
+          size={20}
+          color={colors.textMuted}
           style={styles.icon}
         />
         <TextInput
@@ -58,18 +69,37 @@ export function SearchBar({
           onFocus={onFocus}
           onBlur={onBlur}
         />
+        {showChairFilter && (
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              selectedChairId != null && styles.filterButtonActive,
+            ]}
+            onPress={() => setChairModalVisible(true)}
+          >
+            <Ionicons name="school" size={14} color={selectedChairId != null ? colors.white : colors.brandNavy} />
+            <AppText
+              color={selectedChairId != null ? 'white' : 'brandNavy'}
+              style={[styles.filterButtonText, selectedChairId != null && { maxWidth: 60 }]}
+              weight="semibold"
+              numberOfLines={1}
+            >
+              {selectedChairId != null ? selectedChairName : 'Cátedra'}
+            </AppText>
+          </TouchableOpacity>
+        )}
         {showToothFilter && (
           <TouchableOpacity
             style={[
-              styles.toothFilterButton,
-              selectedTooth && styles.toothFilterButtonActive,
+              styles.filterButton,
+              selectedTooth && styles.filterButtonActive,
             ]}
             onPress={() => setToothModalVisible(true)}
           >
-            <Ionicons name="medical" size={16} color={selectedTooth ? colors.white : colors.brandNavy} />
+            <Ionicons name="medical" size={14} color={selectedTooth ? colors.white : colors.brandNavy} />
             <AppText
               color={selectedTooth ? 'white' : 'brandNavy'}
-              style={{ fontSize: 12, marginLeft: 4 }}
+              style={styles.filterButtonText}
               weight="semibold"
             >
               {selectedTooth ? `#${selectedTooth}` : 'Diente'}
@@ -78,75 +108,63 @@ export function SearchBar({
         )}
       </View>
 
-      {showToothFilter && (
+      <ToothPickerModal
+        visible={toothModalVisible}
+        onClose={() => setToothModalVisible(false)}
+        selectedTooth={selectedTooth ?? null}
+        onToothChange={(tooth) => onToothChange?.(tooth)}
+      />
+
+      {showChairFilter && (
         <Modal
-          visible={toothModalVisible}
+          visible={chairModalVisible}
           transparent
           animationType="slide"
-          onRequestClose={() => setToothModalVisible(false)}
+          onRequestClose={() => setChairModalVisible(false)}
         >
-          <View style={styles.toothModalOverlay}>
-            <View style={styles.toothModalContent}>
-              <View style={styles.toothModalHeader}>
-                <AppText variant="h3" color="brandNavy" weight="bold">Filtrar por Diente</AppText>
-                <TouchableOpacity onPress={() => setToothModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <AppText variant="h3" color="brandNavy" weight="bold">Filtrar por Cátedra</AppText>
+                <TouchableOpacity onPress={() => setChairModalVisible(false)}>
                   <Ionicons name="close" size={24} color={colors.brandNavy} />
                 </TouchableOpacity>
               </View>
 
-              {selectedTooth && (
+              {selectedChairId != null && (
                 <TouchableOpacity
-                  style={styles.clearToothButton}
-                  onPress={() => handleToothSelect(null)}
+                  style={styles.clearButton}
+                  onPress={() => handleChairSelect(null, null)}
                 >
                   <Ionicons name="close-circle" size={18} color={colors.error} />
-                  <AppText color="error" weight="semibold" style={{ marginLeft: 6, fontSize: 13 }}>Quitar filtro de diente</AppText>
+                  <AppText color="error" weight="semibold" style={{ marginLeft: 6, fontSize: 13 }}>Quitar filtro de cátedra</AppText>
                 </TouchableOpacity>
               )}
 
-              <AppText color="textMuted" style={{ marginBottom: 8, paddingHorizontal: spacing.lg, fontSize: 13 }}>Arcada Superior</AppText>
-              <View style={styles.toothGrid}>
-                {ALL_TEETH.slice(0, 16).map((tooth) => (
+              <ScrollView style={styles.chairList}>
+                {chairs.map((chair) => (
                   <TouchableOpacity
-                    key={tooth}
+                    key={chair.id}
                     style={[
-                      styles.toothItem,
-                      selectedTooth === tooth.toString() && styles.toothItemActive,
+                      styles.chairItem,
+                      selectedChairId === chair.id && styles.chairItemSelected,
                     ]}
-                    onPress={() => handleToothSelect(tooth)}
+                    onPress={() => handleChairSelect(chair.id, chair.name)}
                   >
+                    <View style={[styles.chairColorDot, { backgroundColor: chair.color || colors.brandNavy }]} />
                     <AppText
-                      color={selectedTooth === tooth.toString() ? 'white' : 'brandNavy'}
-                      weight="bold"
-                      style={{ fontSize: 13 }}
+                      color={selectedChairId === chair.id ? 'white' : 'brandNavy'}
+                      weight={selectedChairId === chair.id ? 'semibold' : 'regular'}
+                      style={styles.chairItemText}
                     >
-                      {tooth}
+                      {chair.name}
                     </AppText>
+                    {selectedChairId === chair.id && (
+                      <Ionicons name="checkmark" size={18} color={colors.white} />
+                    )}
                   </TouchableOpacity>
                 ))}
-              </View>
-
-              <AppText color="textMuted" style={{ marginBottom: 8, marginTop: spacing.md, paddingHorizontal: spacing.lg, fontSize: 13 }}>Arcada Inferior</AppText>
-              <View style={styles.toothGrid}>
-                {ALL_TEETH.slice(16).map((tooth) => (
-                  <TouchableOpacity
-                    key={tooth}
-                    style={[
-                      styles.toothItem,
-                      selectedTooth === tooth.toString() && styles.toothItemActive,
-                    ]}
-                    onPress={() => handleToothSelect(tooth)}
-                  >
-                    <AppText
-                      color={selectedTooth === tooth.toString() ? 'white' : 'brandNavy'}
-                      weight="bold"
-                      style={{ fontSize: 13 }}
-                    >
-                      {tooth}
-                    </AppText>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              </ScrollView>
             </View>
           </View>
         </Modal>
@@ -175,7 +193,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     padding: 0,
   },
-  toothFilterButton: {
+  filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
@@ -185,22 +203,27 @@ const styles = StyleSheet.create({
     borderColor: colors.brandNavy,
     marginLeft: spacing.sm,
   },
-  toothFilterButtonActive: {
+  filterButtonActive: {
     backgroundColor: colors.brandNavy,
     borderColor: colors.brandNavy,
   },
-  toothModalOverlay: {
+  filterButtonText: {
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
-  toothModalContent: {
+  modalContent: {
     backgroundColor: colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: spacing.xl,
+    maxHeight: '70%',
   },
-  toothModalHeader: {
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -208,30 +231,35 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  clearToothButton: {
+  clearButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
-  toothGrid: {
+  chairList: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+  },
+  chairItem: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: spacing.md,
-    gap: 6,
-  },
-  toothItem: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: colors.brandNavy,
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.white,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: 10,
+    marginBottom: spacing.xs,
   },
-  toothItemActive: {
-    backgroundColor: colors.brandTurquoise,
-    borderColor: colors.brandTurquoise,
+  chairItemSelected: {
+    backgroundColor: colors.brandNavy,
+  },
+  chairColorDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: spacing.sm,
+  },
+  chairItemText: {
+    flex: 1,
+    fontSize: 15,
   },
 })

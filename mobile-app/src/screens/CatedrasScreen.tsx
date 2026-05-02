@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { View, StyleSheet, ScrollView, TouchableOpacity, Image, ImageBackground, ActivityIndicator, Alert, Linking } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { AppText } from '../components/ui'
-import { SearchBar } from '../components/SearchBar'
+import { SearchBar, ChairFilter } from '../components/SearchBar'
 import { PatientCard } from '../components/PatientCard'
 import { useDebounce } from '../hooks/useDebounce'
 import { colors } from '../theme/colors'
@@ -53,8 +53,15 @@ const defaultIcon = require('../../assets/images/catedras/operatoria.png')
 export default function CatedrasScreen({ navigation }: any) {
   const [searchText, setSearchText] = useState('')
   const [selectedTooth, setSelectedTooth] = useState<string | null>(null)
-  const [selectedChairId, setSelectedChairId] = useState<number | null>(null)
-  const [selectedChairName, setSelectedChairName] = useState<string | null>(null)
+  const [chairFilter, setChairFilter] = useState<ChairFilter>({
+    chairId: null,
+    chairName: null,
+    chairColor: null,
+    treatmentId: null,
+    treatmentName: null,
+    subclassId: null,
+    subclassName: null,
+  })
   const debouncedSearchText = useDebounce(searchText, 500)
 
   // Cargar banners publicitarios desde la API
@@ -96,18 +103,29 @@ export default function CatedrasScreen({ navigation }: any) {
   })
 
   // Buscar pacientes cuando hay texto de búsqueda
+  const hasAnyFilter = !!selectedTooth || chairFilter.chairId != null
+
   const { data: searchResults, isLoading: isSearching, error: searchError } = useQuery({
-    queryKey: ['patients-search', debouncedSearchText, selectedTooth, selectedChairId],
+    queryKey: [
+      'patients-search',
+      debouncedSearchText,
+      selectedTooth,
+      chairFilter.chairId,
+      chairFilter.treatmentId,
+      chairFilter.subclassId,
+    ],
     queryFn: async () => {
-      if (!debouncedSearchText.trim() && !selectedTooth && !selectedChairId) return []
+      if (!debouncedSearchText.trim() && !hasAnyFilter) return []
       const params: any = {}
       if (debouncedSearchText.trim()) params.q = debouncedSearchText
       if (selectedTooth) params.tooth_fdi = selectedTooth
-      if (selectedChairId) params.chair_id = selectedChairId
+      if (chairFilter.chairId) params.chair_id = chairFilter.chairId
+      if (chairFilter.treatmentId) params.treatments = [chairFilter.treatmentId]
+      if (chairFilter.subclassId) params.treatment_subclass_id = chairFilter.subclassId
       const response = await api.patients.search(params)
       return response.data.data || []
     },
-    enabled: debouncedSearchText.trim().length > 0 || !!selectedTooth || !!selectedChairId,
+    enabled: debouncedSearchText.trim().length > 0 || hasAnyFilter,
   })
 
   // Transformar datos de búsqueda al formato esperado por PatientCard
@@ -126,7 +144,7 @@ export default function CatedrasScreen({ navigation }: any) {
   }))
 
   // Mostrar pacientes si hay texto de búsqueda, sino mostrar cátedras
-  const shouldShowPatients = searchText.trim().length > 0 || !!selectedTooth || !!selectedChairId
+  const shouldShowPatients = searchText.trim().length > 0 || hasAnyFilter
 
   // Obtener icono para una cátedra: icon_url remoto > hardcoded PNG por key
   const getChairIcon = (chair: Chair): { uri: string } | number => {
@@ -148,9 +166,8 @@ export default function CatedrasScreen({ navigation }: any) {
             placeholder="Buscar pacientes, cátedras, tratamientos..."
             showChairFilter
             chairs={chairsData || []}
-            selectedChairId={selectedChairId}
-            selectedChairName={selectedChairName}
-            onChairChange={(id, name) => { setSelectedChairId(id); setSelectedChairName(name) }}
+            chairFilter={chairFilter}
+            onChairFilterChange={setChairFilter}
             showToothFilter
             selectedTooth={selectedTooth}
             onToothChange={setSelectedTooth}

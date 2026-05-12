@@ -63,7 +63,7 @@ export default {
       backgroundColor: '#ffffff',
     },
     ios: {
-      supportsTablet: true,
+      supportsTablet: false,
       bundleIdentifier: IS_DEV
         ? 'com.keuch2.odontopacientes-mobile-dev'
         : 'com.keuch2.odontopacientes-mobile',

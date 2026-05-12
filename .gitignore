@@ -65,12 +65,17 @@ coverage/
 .parcel-cache/
 
 # Old build artifacts
-assets/
+/assets/
 backend-build/
 web-admin-build/
 mobile-app-backup/
 scripts/
 shared/
+
+# Excepción explícita: los assets de mobile-app son críticos para el build de Expo
+# (icon.png, splash-icon.png, adaptive-icon.png se usan en prebuild)
+!mobile-app/assets/
+!mobile-app/assets/**
 
 # Source maps
 *.map

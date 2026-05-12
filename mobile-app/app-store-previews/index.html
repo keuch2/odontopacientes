@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=414, initial-scale=1" />
+  <title>OdontoPacientes — App Store Previews</title>
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <script src="images.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #102C6A;
+      --navy-dark:  #0A1E4A;
+      --teal:       #00C4C4;
+      --teal-light: #4DE8E8;
+      --white:      #FFFFFF;
+      --slide-w: 414px;
+      --slide-h: 896px;
+      --dpr: 3;
+    }
+
+    body {
+      background: #111;
+      font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      padding: 28px 0 64px;
+    }
+
+    /* ─── Control bar ─── */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    .size-btns { display: flex; gap: 8px; }
+    .size-btn {
+      padding: 7px 16px;
+      border-radius: 8px;
+      border: 1.5px solid #444;
+      background: #1c1c1c;
+      color: #aaa;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .size-btn.active { border-color: #4DE8E8; color: #4DE8E8; background: rgba(77,232,232,.08); }
+    .info-tip {
+      font-size: 12px;
+      color: #555;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* ─── Slide group ─── */
+    .slide-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 40px;
+    }
+
+    /* ─── Slide ─── */
+    .slide {
+      width: var(--slide-w);
+      height: var(--slide-h);
+      position: relative;
+      overflow: hidden;
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -4px 40px rgba(0,0,0,.6);
+      flex-shrink: 0;
+    }
+
+    /* Backgrounds */
+    .bg-1 { background: linear-gradient(155deg, #0A1E4A 0%, #0E3D6E 45%, #0C5A7A 100%); }
+    .bg-2 { background: linear-gradient(155deg, #0A3A5C 0%, #0E5E6E 45%, #0F7A72 100%); }
+    .bg-3 { background: linear-gradient(155deg, #071A42 0%, #102C6A 50%, #0A3A6A 100%); }
+    .bg-4 { background: linear-gradient(155deg, #0C3060 0%, #0A4A70 50%, #0E6068 100%); }
+    .bg-5 { background: linear-gradient(155deg, #0A2A5A 0%, #0D4A6A 40%, #0A6E6E 100%); }
+
+    /* Glow orbs */
+    .slide::before, .slide::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .slide::before {
+      width: 70%; height: 70%;
+      top: -15%; right: -15%;
+      background: radial-gradient(circle, rgba(0,196,196,.16) 0%, transparent 70%);
+    }
+    .slide::after {
+      width: 55%; height: 55%;
+      bottom: 5%; left: -15%;
+      background: radial-gradient(circle, rgba(77,232,232,.10) 0%, transparent 70%);
+    }
+
+    /* ─── Bottom label (texto debajo del teléfono) ─── */
+    .bottom-label {
+      position: absolute;
+      left: 0; right: 0;
+      top: 60%;
+      padding: 0 9%;
+      z-index: 10;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,.11);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 40px;
+      padding: 5px 12px;
+      margin-bottom: 10px;
+    }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal-light); }
+    .badge span { color: var(--teal-light); font-size: 10px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase; }
+    .headline { color: var(--white); font-size: 28px; font-weight: 800; line-height: 1.15; letter-spacing: -.4px; }
+    .headline em { font-style: normal; color: var(--teal-light); }
+    .subline { margin-top: 8px; color: rgba(255,255,255,.55); font-size: 13px; font-weight: 400; line-height: 1.5; }
+
+    /* ─── Fila de chips entre teléfono y texto ─── */
+    .chips-row {
+      position: absolute;
+      left: 0; right: 0;
+      top: 57%;
+      z-index: 20;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 4%;
+      gap: 6px;
+    }
+
+    /* ─── Phone frame ─── */
+    .phone-wrap { position: absolute; left: 50%; transform: translateX(-50%); z-index: 5; }
+    .phone {
+      position: relative;
+      border-radius: 34px;
+      background: #080808;
+      box-shadow:
+        0 0 0 2px #252525,
+        0 0 0 4px #0e0e0e,
+        0 24px 60px rgba(0,0,0,.75),
+        inset 0 0 0 1px #2e2e2e;
+      overflow: hidden;
+    }
+    .phone-notch {
+      position: absolute;
+      top: 9px; left: 50%;
+      transform: translateX(-50%);
+      width: 35%; height: 22px;
+      background: #080808;
+      border-radius: 0 0 14px 14px;
+      z-index: 2;
+    }
+    .phone-notch::after {
+      content: '';
+      position: absolute;
+      top: 7px; left: 50%;
+      transform: translateX(-50%);
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #181818;
+    }
+    .phone img { display: block; width: 100%; border-radius: 32px; }
+
+    /* ─── Chips — sin backdrop-filter para compatibilidad con html2canvas ─── */
+    .chip {
+      position: absolute;
+      z-index: 20;
+      background: rgba(16, 44, 106, 0.82);
+      border: 1px solid rgba(77,232,232,.28);
+      border-radius: 12px;
+      padding: 7px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .chip-icon { font-size: 16px; line-height: 1; }
+    .chip-text { color: #fff; font-size: 11px; font-weight: 600; line-height: 1.3; white-space: nowrap; }
+    .chip-text small { display: block; color: rgba(255,255,255,.5); font-size: 9.5px; font-weight: 400; }
+
+    /* ─── Dots ─── */
+    .dots { position: absolute; bottom: 7%; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; z-index: 10; }
+    .dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.22); }
+    .dot.active { background: var(--teal-light); width: 16px; border-radius: 3px; }
+
+    /* ─── Bottom bar ─── */
+    .bottom-bar { position: absolute; bottom: 0; left: 0; right: 0; padding: 0 8% 3.5%; z-index: 10; display: flex; align-items: center; justify-content: space-between; }
+    .app-logo { display: flex; align-items: center; gap: 8px; }
+    .app-logo svg { width: 28px; height: 28px; filter: drop-shadow(0 2px 5px rgba(0,196,196,.5)); }
+    .app-logo-text { font-size: 14px; font-weight: 700; color: rgba(255,255,255,.82); letter-spacing: -.15px; }
+    .slide-num { color: rgba(255,255,255,.28); font-size: 12px; font-weight: 600; }
+
+    /* ─── Download button ─── */
+    .dl-btn {
+      width: var(--slide-w);
+      padding: 14px 0;
+      background: #1a1a1a;
+      border: none;
+      border-top: 1px solid #2a2a2a;
+      border-radius: 0 0 14px 14px;
+      color: #4DE8E8;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background .15s, color .15s;
+      box-shadow: 0 8px 30px rgba(0,0,0,.5);
+      letter-spacing: .1px;
+    }
+    .dl-btn:hover { background: #222; color: #7df0f0; }
+    .dl-btn:disabled { color: #555; cursor: default; background: #161616; }
+    .dl-btn .arrow { font-size: 15px; }
+    .dl-btn .dim-label { color: rgba(77,232,232,.55); font-weight: 400; font-size: 11px; margin-left: 4px; }
+
+    /* ─── Sección capturas simples ─── */
+    .section-title {
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+      margin: 20px 0 24px;
+      padding-top: 20px;
+      border-top: 1px solid #2a2a2a;
+    }
+    .section-title h2 {
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -.1px;
+    }
+    .section-title p {
+      margin-top: 5px;
+      color: #555;
+      font-size: 12px;
+    }
+
+    /* captura simple: fondo blanco, mockup centrado */
+    .cap {
+      width: var(--slide-w);
+      height: var(--slide-h);
+      position: relative;
+      overflow: hidden;
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -4px 40px rgba(0,0,0,.5);
+      flex-shrink: 0;
+      background: #F2F4F8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cap img {
+      max-width: 82%;
+      max-height: 92%;
+      object-fit: contain;
+      border-radius: 24px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.18), 0 2px 8px rgba(0,0,0,.10);
+    }
+    /* botón de captura simple (fondo claro) */
+    .dl-btn-light {
+      width: var(--slide-w);
+      padding: 14px 0;
+      background: #e8eaf0;
+      border: none;
+      border-top: 1px solid #d0d4e0;
+      border-radius: 0 0 14px 14px;
+      color: #102C6A;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background .15s;
+      box-shadow: 0 8px 30px rgba(0,0,0,.35);
+      letter-spacing: .1px;
+    }
+    .dl-btn-light:hover { background: #dde0ec; }
+    .dl-btn-light:disabled { color: #aaa; cursor: default; }
+    .dl-btn-light .arrow { font-size: 15px; }
+    .dl-btn-light .dim-label { color: #7a8ab0; font-weight: 400; font-size: 11px; margin-left: 4px; }
+  </style>
+</head>
+<body>
+
+<!-- ─── Size switcher ─── -->
+<div class="controls">
+  <div class="size-btns">
+    <button class="size-btn active" onclick="setSize(414, 896, 3, '1242×2688')">1242 × 2688 px</button>
+    <button class="size-btn"        onclick="setSize(428, 926, 3, '1284×2778')">1284 × 2778 px</button>
+  </div>
+  <div class="info-tip">Seleccioná el tamaño y luego descargá cada screenshot</div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 1 — LOGIN
+══════════════════════════════════════ -->
+<div class="slide-group">
+  <div class="slide bg-1" id="s1">
+    <div class="phone-wrap" style="top:4%; width:100%;">
+      <div class="phone" style="width:219px; height:460px; margin:0 auto;">
+        <div class="phone-notch"></div>
+        <img id="img-login" src="" alt="Login" />
+      </div>
+    </div>
+    <div class="chips-row">
+      <div class="chip"><div class="chip-icon">🔐</div><div class="chip-text">Acceso seguro<small>Autenticación institucional</small></div></div>
+      <div class="chip"><div class="chip-icon">⚡</div><div class="chip-text">Rápido<small>Inicio en segundos</small></div></div>
+    </div>
+    <div class="bottom-label">
+      <div class="badge"><div class="badge-dot"></div><span>Gestión clínica</span></div>
+      <div class="headline">Conectando<br>alumnos y<br><em>pacientes.</em></div>
+      <div class="subline">Accedé con tu cuenta institucional<br>y empezá a trabajar al instante.</div>
+    </div>
+    <div class="dots">
+      <div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <div class="bottom-bar">
+      <div class="app-logo">
+        <svg viewBox="0 0 40 40" fill="none"><path d="M20 4C13 4 8 10 8 16c0 4 2 7.5 5 9.5L14 34h12l1-8.5C30 23.5 32 20 32 16c0-6-5-12-12-12z" fill="url(#g1)"/><path d="M15 18c0 2.8 2.2 5 5 5s5-2.2 5-5" stroke="white" stroke-width="2" stroke-linecap="round"/><defs><linearGradient id="g1" x1="8" y1="4" x2="32" y2="34" gradientUnits="userSpaceOnUse"><stop stop-color="#4DE8E8"/><stop offset="1" stop-color="#1060B0"/></linearGradient></defs></svg>
+        <span class="app-logo-text">OdontoPacientes</span>
+      </div>
+      <span class="slide-num">1 / 5</span>
+    </div>
+  </div>
+  <button class="dl-btn" id="btn-s1" onclick="downloadSlide('s1','01-login')">
+    <span class="arrow">↓</span> Descargar JPG <span class="dim-label" id="lbl-s1">1242 × 2688 px</span>
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 2 — CÁTEDRAS
+══════════════════════════════════════ -->
+<div class="slide-group">
+  <div class="slide bg-2" id="s2">
+    <div class="phone-wrap" style="top:4%; width:100%;">
+      <div class="phone" style="width:219px; height:460px; margin:0 auto;">
+        <div class="phone-notch"></div>
+        <img id="img-catedras" src="" alt="Cátedras" />
+      </div>
+    </div>
+    <div class="chips-row">
+      <div class="chip"><div class="chip-icon">🦷</div><div class="chip-text">8 cátedras<small>Cirugía, Periodoncia…</small></div></div>
+      <div class="chip"><div class="chip-icon">🔍</div><div class="chip-text">Búsqueda rápida<small>Por paciente o tratamiento</small></div></div>
+    </div>
+    <div class="bottom-label">
+      <div class="badge"><div class="badge-dot"></div><span>Organización</span></div>
+      <div class="headline">Tus cátedras,<br>siempre a<br><em>un toque.</em></div>
+      <div class="subline">Cirugías, periodoncia, operatoria<br>y más desde un solo lugar.</div>
+    </div>
+    <div class="dots">
+      <div class="dot"></div><div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <div class="bottom-bar">
+      <div class="app-logo">
+        <svg viewBox="0 0 40 40" fill="none"><path d="M20 4C13 4 8 10 8 16c0 4 2 7.5 5 9.5L14 34h12l1-8.5C30 23.5 32 20 32 16c0-6-5-12-12-12z" fill="url(#g2)"/><path d="M15 18c0 2.8 2.2 5 5 5s5-2.2 5-5" stroke="white" stroke-width="2" stroke-linecap="round"/><defs><linearGradient id="g2" x1="8" y1="4" x2="32" y2="34" gradientUnits="userSpaceOnUse"><stop stop-color="#4DE8E8"/><stop offset="1" stop-color="#1060B0"/></linearGradient></defs></svg>
+        <span class="app-logo-text">OdontoPacientes</span>
+      </div>
+      <span class="slide-num">2 / 5</span>
+    </div>
+  </div>
+  <button class="dl-btn" id="btn-s2" onclick="downloadSlide('s2','02-catedras')">
+    <span class="arrow">↓</span> Descargar JPG <span class="dim-label" id="lbl-s2">1242 × 2688 px</span>
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 3 — LISTA DE PACIENTES
+══════════════════════════════════════ -->
+<div class="slide-group">
+  <div class="slide bg-3" id="s3">
+    <div class="phone-wrap" style="top:4%; width:100%;">
+      <div class="phone" style="width:219px; height:460px; margin:0 auto;">
+        <div class="phone-notch"></div>
+        <img id="img-lista" src="" alt="Lista pacientes" />
+      </div>
+    </div>
+    <div class="chips-row">
+      <div class="chip"><div class="chip-icon">✅</div><div class="chip-text">Estado en vivo<small>Disponible · Proceso · Final</small></div></div>
+      <div class="chip"><div class="chip-icon">🎯</div><div class="chip-text">Filtros<small>Por cátedra y tratamiento</small></div></div>
+    </div>
+    <div class="bottom-label">
+      <div class="badge"><div class="badge-dot"></div><span>Pacientes</span></div>
+      <div class="headline">Todos tus<br>pacientes,<br><em>organizados.</em></div>
+      <div class="subline">Filtrá por tratamiento, estado<br>y avance en tiempo real.</div>
+    </div>
+    <div class="dots">
+      <div class="dot"></div><div class="dot"></div><div class="dot active"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <div class="bottom-bar">
+      <div class="app-logo">
+        <svg viewBox="0 0 40 40" fill="none"><path d="M20 4C13 4 8 10 8 16c0 4 2 7.5 5 9.5L14 34h12l1-8.5C30 23.5 32 20 32 16c0-6-5-12-12-12z" fill="url(#g3)"/><path d="M15 18c0 2.8 2.2 5 5 5s5-2.2 5-5" stroke="white" stroke-width="2" stroke-linecap="round"/><defs><linearGradient id="g3" x1="8" y1="4" x2="32" y2="34" gradientUnits="userSpaceOnUse"><stop stop-color="#4DE8E8"/><stop offset="1" stop-color="#1060B0"/></linearGradient></defs></svg>
+        <span class="app-logo-text">OdontoPacientes</span>
+      </div>
+      <span class="slide-num">3 / 5</span>
+    </div>
+  </div>
+  <button class="dl-btn" id="btn-s3" onclick="downloadSlide('s3','03-pacientes')">
+    <span class="arrow">↓</span> Descargar JPG <span class="dim-label" id="lbl-s3">1242 × 2688 px</span>
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 4 — FICHA PACIENTE
+══════════════════════════════════════ -->
+<div class="slide-group">
+  <div class="slide bg-4" id="s4">
+    <div class="phone-wrap" style="top:4%; width:100%;">
+      <div class="phone" style="width:219px; height:460px; margin:0 auto;">
+        <div class="phone-notch"></div>
+        <img id="img-ficha" src="" alt="Ficha paciente" />
+      </div>
+    </div>
+    <div class="chips-row">
+      <div class="chip"><div class="chip-icon">🦷</div><div class="chip-text">Odontograma<small>Visual e interactivo</small></div></div>
+      <div class="chip"><div class="chip-icon">📋</div><div class="chip-text">Anamnesis<small>Datos médicos completos</small></div></div>
+    </div>
+    <div class="bottom-label">
+      <div class="badge"><div class="badge-dot"></div><span>Historia clínica</span></div>
+      <div class="headline">Ficha clínica<br>completa en<br><em>tu bolsillo.</em></div>
+      <div class="subline">Anamnesis, odontograma y<br>procedimientos al alcance de la mano.</div>
+    </div>
+    <div class="dots">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot active"></div><div class="dot"></div>
+    </div>
+    <div class="bottom-bar">
+      <div class="app-logo">
+        <svg viewBox="0 0 40 40" fill="none"><path d="M20 4C13 4 8 10 8 16c0 4 2 7.5 5 9.5L14 34h12l1-8.5C30 23.5 32 20 32 16c0-6-5-12-12-12z" fill="url(#g4)"/><path d="M15 18c0 2.8 2.2 5 5 5s5-2.2 5-5" stroke="white" stroke-width="2" stroke-linecap="round"/><defs><linearGradient id="g4" x1="8" y1="4" x2="32" y2="34" gradientUnits="userSpaceOnUse"><stop stop-color="#4DE8E8"/><stop offset="1" stop-color="#1060B0"/></linearGradient></defs></svg>
+        <span class="app-logo-text">OdontoPacientes</span>
+      </div>
+      <span class="slide-num">4 / 5</span>
+    </div>
+  </div>
+  <button class="dl-btn" id="btn-s4" onclick="downloadSlide('s4','04-ficha')">
+    <span class="arrow">↓</span> Descargar JPG <span class="dim-label" id="lbl-s4">1242 × 2688 px</span>
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 5 — VER PROCEDIMIENTO
+══════════════════════════════════════ -->
+<div class="slide-group">
+  <div class="slide bg-5" id="s5">
+    <div class="phone-wrap" style="top:4%; width:100%;">
+      <div class="phone" style="width:219px; height:460px; margin:0 auto;">
+        <div class="phone-notch"></div>
+        <img id="img-proc" src="" alt="Procedimiento" />
+      </div>
+    </div>
+    <div class="chips-row">
+      <div class="chip"><div class="chip-icon">📸</div><div class="chip-text">Fotos clínicas<small>Antes y después</small></div></div>
+      <div class="chip"><div class="chip-icon">📅</div><div class="chip-text">Sesiones<small>Progreso por fecha</small></div></div>
+    </div>
+    <div class="bottom-label">
+      <div class="badge"><div class="badge-dot"></div><span>Seguimiento</span></div>
+      <div class="headline">Cada<br>tratamiento,<br><em>documentado.</em></div>
+      <div class="subline">Registrá sesiones, fotos y<br>evolución con un solo tap.</div>
+    </div>
+    <div class="dots">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot active"></div>
+    </div>
+    <div class="bottom-bar">
+      <div class="app-logo">
+        <svg viewBox="0 0 40 40" fill="none"><path d="M20 4C13 4 8 10 8 16c0 4 2 7.5 5 9.5L14 34h12l1-8.5C30 23.5 32 20 32 16c0-6-5-12-12-12z" fill="url(#g5)"/><path d="M15 18c0 2.8 2.2 5 5 5s5-2.2 5-5" stroke="white" stroke-width="2" stroke-linecap="round"/><defs><linearGradient id="g5" x1="8" y1="4" x2="32" y2="34" gradientUnits="userSpaceOnUse"><stop stop-color="#4DE8E8"/><stop offset="1" stop-color="#1060B0"/></linearGradient></defs></svg>
+        <span class="app-logo-text">OdontoPacientes</span>
+      </div>
+      <span class="slide-num">5 / 5</span>
+    </div>
+  </div>
+  <button class="dl-btn" id="btn-s5" onclick="downloadSlide('s5','05-procedimiento')">
+    <span class="arrow">↓</span> Descargar JPG <span class="dim-label" id="lbl-s5">1242 × 2688 px</span>
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════
+     CAPTURAS SIMPLES — App Store
+══════════════════════════════════════ -->
+<div class="section-title">
+  <h2>Capturas de pantalla — App Store</h2>
+  <p>Fondo liso, sin texto de marketing. Subir como "Capturas de pantalla" en App Store Connect.</p>
+</div>
+
+<!-- Captura 1: Login -->
+<div class="slide-group">
+  <div class="cap" id="cap1">
+    <img id="cap-img-login" src="" alt="Login" />
+  </div>
+  <button class="dl-btn-light" id="btn-cap1" onclick="downloadCap('cap1','sc-01-login')">
+    <span class="arrow">↓</span> Descargar JPG <span class="dim-label" id="lbl-cap1">1242 × 2688 px</span>
+  </button>
+</div>
+
+<!-- Captura 2: Cátedras -->
+<div class="slide-group">
+  <div class="cap" id="cap2">
+    <img id="cap-img-catedras" src="" alt="Cátedras" />
+  </div>
+  <button class="dl-btn-light" id="btn-cap2" onclick="downloadCap('cap2','sc-02-catedras')">
+    <span class="arrow">↓</span> Descargar JPG <span class="dim-label" id="lbl-cap2">1242 × 2688 px</span>
+  </button>
+</div>
+
+<!-- Captura 3: Lista de pacientes -->
+<div class="slide-group">
+  <div class="cap" id="cap3">
+    <img id="cap-img-lista" src="" alt="Lista de pacientes" />
+  </div>
+  <button class="dl-btn-light" id="btn-cap3" onclick="downloadCap('cap3','sc-03-pacientes')">
+    <span class="arrow">↓</span> Descargar JPG <span class="dim-label" id="lbl-cap3">1242 × 2688 px</span>
+  </button>
+</div>
+
+<!-- Captura 4: Ficha paciente -->
+<div class="slide-group">
+  <div class="cap" id="cap4">
+    <img id="cap-img-ficha" src="" alt="Ficha paciente" />
+  </div>
+  <button class="dl-btn-light" id="btn-cap4" onclick="downloadCap('cap4','sc-04-ficha')">
+    <span class="arrow">↓</span> Descargar JPG <span class="dim-label" id="lbl-cap4">1242 × 2688 px</span>
+  </button>
+</div>
+
+<!-- Captura 5: Ver procedimiento -->
+<div class="slide-group">
+  <div class="cap" id="cap5">
+    <img id="cap-img-proc" src="" alt="Procedimiento" />
+  </div>
+  <button class="dl-btn-light" id="btn-cap5" onclick="downloadCap('cap5','sc-05-procedimiento')">
+    <span class="arrow">↓</span> Descargar JPG <span class="dim-label" id="lbl-cap5">1242 × 2688 px</span>
+  </button>
+</div>
+
+<script>
+  // Inject base64 images (eliminates cross-origin taint on canvas)
+  // Slides con marketing
+  document.getElementById('img-login').src    = IMGS.login
+  document.getElementById('img-catedras').src = IMGS.catedras
+  document.getElementById('img-lista').src    = IMGS.lista
+  document.getElementById('img-ficha').src    = IMGS.ficha
+  document.getElementById('img-proc').src     = IMGS.proc
+
+  // Capturas simples
+  document.getElementById('cap-img-login').src    = IMGS.login
+  document.getElementById('cap-img-catedras').src = IMGS.catedras
+  document.getElementById('cap-img-lista').src    = IMGS.lista
+  document.getElementById('cap-img-ficha').src    = IMGS.ficha
+  document.getElementById('cap-img-proc').src     = IMGS.proc
+
+  // Current export config
+  let cfg = { w: 1242, h: 2688, cssW: 414, cssH: 896, dpr: 3, label: '1242×2688' }
+
+  // Phone heights designed for cssH=896
+  const BASE_PHONE_H = { s1: 460, s2: 460, s3: 460, s4: 460, s5: 460 }
+  const BASE_PHONE_W = 219
+  const BASE_CSS_H   = 896
+  const BASE_CSS_W   = 414
+
+  function setSize(cssW, cssH, dpr, label) {
+    cfg = { w: cssW * dpr, h: cssH * dpr, cssW, cssH, dpr, label }
+
+    // Update CSS variables
+    const root = document.documentElement
+    root.style.setProperty('--slide-w', cssW + 'px')
+    root.style.setProperty('--slide-h', cssH + 'px')
+
+    // Scale phone frames
+    const hScale = cssH / BASE_CSS_H
+    const wScale = cssW / BASE_CSS_W
+    ;['s1','s2','s3','s4','s5'].forEach(id => {
+      const phone = document.querySelector(`#${id} .phone`)
+      if (!phone) return
+      phone.style.height = Math.round(BASE_PHONE_H[id] * hScale) + 'px'
+      phone.style.width  = Math.round(BASE_PHONE_W   * wScale) + 'px'
+    })
+
+    // Update button labels
+    ;['s1','s2','s3','s4','s5'].forEach(id => {
+      const lbl = document.getElementById('lbl-' + id)
+      if (lbl) lbl.textContent = `${cfg.w} × ${cfg.h} px`
+    })
+
+    // Update dl-btn widths (slides y capturas)
+    document.querySelectorAll('.dl-btn, .dl-btn-light').forEach(b => {
+      b.style.width = cssW + 'px'
+    })
+
+    // Update cap labels
+    ;['cap1','cap2','cap3','cap4','cap5'].forEach(id => {
+      const lbl = document.getElementById('lbl-' + id)
+      if (lbl) lbl.textContent = `${cfg.w} × ${cfg.h} px`
+    })
+
+    // Update cap element sizes
+    document.querySelectorAll('.cap').forEach(c => {
+      c.style.width  = cssW + 'px'
+      c.style.height = cssH + 'px'
+    })
+
+    // Toggle active button
+    document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'))
+    event.currentTarget.classList.add('active')
+
+    // Update viewport meta
+    document.querySelector('meta[name=viewport]').content = `width=${cssW}, initial-scale=1`
+  }
+
+  async function downloadSlide(slideId, filename) {
+    const slide = document.getElementById(slideId)
+    const btn   = document.getElementById('btn-' + slideId)
+
+    btn.disabled = true
+    btn.innerHTML = '<span style="opacity:.5">Generando imagen…</span>'
+
+    try {
+      const canvas = await html2canvas(slide, {
+        scale:      cfg.dpr,
+        width:      cfg.cssW,
+        height:     cfg.cssH,
+        useCORS:    false,
+        allowTaint: true,
+        logging:    false,
+        backgroundColor: '#102C6A',
+      })
+
+      const link = document.createElement('a')
+      link.download = `odontopacientes-${filename}-${cfg.label}.jpg`
+      link.href = canvas.toDataURL('image/jpeg', 0.95)
+      link.click()
+    } catch (err) {
+      alert('Error al generar la imagen: ' + err.message)
+      console.error(err)
+    } finally {
+      btn.disabled = false
+      btn.innerHTML = `<span class="arrow">↓</span> Descargar JPG <span class="dim-label" id="lbl-${slideId}">${cfg.w} × ${cfg.h} px</span>`
+    }
+  }
+  async function downloadCap(capId, filename) {
+    const cap = document.getElementById(capId)
+    const btn = document.getElementById('btn-' + capId)
+
+    btn.disabled = true
+    btn.innerHTML = '<span style="opacity:.5">Generando imagen…</span>'
+
+    try {
+      const canvas = await html2canvas(cap, {
+        scale:           cfg.dpr,
+        width:           cfg.cssW,
+        height:          cfg.cssH,
+        useCORS:         false,
+        allowTaint:      true,
+        logging:         false,
+        backgroundColor: '#F2F4F8',
+      })
+
+      const link = document.createElement('a')
+      link.download = `odontopacientes-${filename}-${cfg.label}.jpg`
+      link.href = canvas.toDataURL('image/jpeg', 0.95)
+      link.click()
+    } catch (err) {
+      alert('Error al generar la imagen: ' + err.message)
+      console.error(err)
+    } finally {
+      btn.disabled = false
+      btn.innerHTML = `<span class="arrow">↓</span> Descargar JPG <span class="dim-label" id="lbl-${capId}">${cfg.w} × ${cfg.h} px</span>`
+    }
+  }
+</script>
+</body>
+</html>

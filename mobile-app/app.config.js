@@ -71,6 +71,7 @@ export default {
         NSCameraUsageDescription: 'Esta app necesita acceso a la cámara para tomar fotos de documentos y odontogramas.',
         NSPhotoLibraryUsageDescription: 'Esta app necesita acceso a tu galería para seleccionar imágenes de documentos.',
         NSPhotoLibraryAddUsageDescription: 'Esta app necesita permiso para guardar imágenes en tu galería.',
+        ITSAppUsesNonExemptEncryption: false,
       },
     },
     android: {

@@ -1,0 +1,22 @@
+# Excluir todo lo del monorepo padre. EAS Build, al detectar el git root,
+# sube todo el repo y se confunde con los lockfiles/pnpm-workspace del root.
+# Este archivo fuerza a EAS a tratar mobile-app/ como proyecto npm aislado.
+../backend/
+../web-admin/
+../shared/
+../docs/
+../scripts/
+../.git/
+../.github/
+../.vscode/
+../.idea/
+../node_modules/
+../*.json
+../*.yaml
+../*.md
+../*.lock
+../pnpm-lock.yaml
+../pnpm-workspace.yaml
+../package-lock.json
+../yarn.lock
+../*.sh

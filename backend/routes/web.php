@@ -14,3 +14,7 @@ Route::get('/', function () {
 Route::get('/health', function () {
     return response()->json(['status' => 'ok', 'timestamp' => now()]);
 });
+
+Route::get('/privacidad', function () {
+    return response()->file(public_path('privacidad.html'));
+});

@@ -199,9 +199,9 @@ Responsable: Boris Dedoff
 - Dispositivos: iPhone 14 Plus, iPhone 13 Pro Max
 - Apple usa estas como fallback para tamaños menores
 
-### iPad Pro 13" (obligatorio porque `supportsTablet: true`)
-- Resolución: **2064 × 2752 px**
-- Dispositivo: iPad Pro 13" (M4)
+### iPad Pro 13" (NO requerido)
+La app está configurada como solo iPhone (`supportsTablet: false`).
+No necesitás capturas de iPad.
 
 ### Capturas sugeridas (en orden de aparición en la ficha)
 

@@ -1,11 +1,14 @@
-# Excluir todo lo del monorepo padre. EAS Build, al detectar el git root,
-# sube todo el repo y se confunde con los lockfiles/pnpm-workspace del root.
-# Este archivo fuerza a EAS a tratar mobile-app/ como proyecto npm aislado.
+# Con EAS_NO_VCS=1, EAS copia desde mobile-app/ usando .easignore con paths
+# relativos a este directorio. Cualquier "../" se interpreta hacia el padre.
+
+# Workspaces hermanos del monorepo
 ../backend/
 ../web-admin/
 ../shared/
 ../docs/
 ../scripts/
+
+# Configuración del monorepo raíz que confunde a EAS
 ../.git/
 ../.github/
 ../.vscode/
@@ -15,8 +18,10 @@
 ../*.yaml
 ../*.md
 ../*.lock
-../pnpm-lock.yaml
-../pnpm-workspace.yaml
-../package-lock.json
-../yarn.lock
 ../*.sh
+
+# Asset pesado local que no necesita el build
+mobile-app-backup/
+imagenes_mobile/
+mockups/
+app-store-previews/

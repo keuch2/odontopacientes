@@ -192,7 +192,8 @@ export default function RegisterStep3Screen({ navigation }: any) {
           ¡Bienvenido {registerData.fullName.split(' ')[0]}!
         </AppText>
 
-        <View style={styles.planSection}>
+        {/* Sección de planes oculta durante la beta inicial */}
+        <View style={[styles.planSection, { display: 'none' }]}>
           <AppText variant="body" color="brandNavy" weight="semibold" style={styles.planLabel}>
             Tu plan activo es:
           </AppText>
@@ -207,7 +208,7 @@ export default function RegisterStep3Screen({ navigation }: any) {
           </View>
         </View>
 
-        <AppText color="brandNavy" weight="semibold" style={styles.upgradeLabel}>
+        <AppText color="brandNavy" weight="semibold" style={[styles.upgradeLabel, { display: 'none' }]}>
           Accedé a la aplicación completa
         </AppText>
         <AppButton 

@@ -68,9 +68,9 @@ export default {
         ? 'com.keuch2.odontopacientes-mobile-dev'
         : 'com.keuch2.odontopacientes-mobile',
       infoPlist: {
-        NSCameraUsageDescription: 'Esta app necesita acceso a la cámara para tomar fotos de documentos y odontogramas.',
-        NSPhotoLibraryUsageDescription: 'Esta app necesita acceso a tu galería para seleccionar imágenes de documentos.',
-        NSPhotoLibraryAddUsageDescription: 'Esta app necesita permiso para guardar imágenes en tu galería.',
+        NSCameraUsageDescription: 'OdontoPacientes usa la cámara para que puedas tomar fotos clínicas de pacientes, documentos de identidad, odontogramas y tu foto de perfil.',
+        NSPhotoLibraryUsageDescription: 'OdontoPacientes accede a tu galería para que puedas adjuntar fotos clínicas, documentos de identidad de pacientes y actualizar tu foto de perfil.',
+        NSPhotoLibraryAddUsageDescription: 'OdontoPacientes guarda en tu galería las fotos clínicas y reportes que generes desde la aplicación.',
         ITSAppUsesNonExemptEncryption: false,
       },
     },
@@ -98,8 +98,8 @@ export default {
       [
         'expo-image-picker',
         {
-          photosPermission: 'Esta app necesita acceso a tu galería para seleccionar imágenes.',
-          cameraPermission: 'Esta app necesita acceso a la cámara para tomar fotos.',
+          photosPermission: 'OdontoPacientes accede a tu galería para que puedas adjuntar fotos clínicas, documentos de identidad de pacientes y actualizar tu foto de perfil.',
+          cameraPermission: 'OdontoPacientes usa la cámara para que puedas tomar fotos clínicas de pacientes, documentos de identidad, odontogramas y tu foto de perfil.',
         },
       ],
     ],

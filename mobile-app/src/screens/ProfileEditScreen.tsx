@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { View, ScrollView, StyleSheet, Alert, TouchableOpacity, Image, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, FlatList } from 'react-native'
-import { TextInput, Button, SegmentedButtons } from 'react-native-paper'
+import { TextInput, Button } from 'react-native-paper'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
@@ -11,8 +11,6 @@ import { spacing } from '../theme/spacing'
 import { useAuthStore } from '../store/auth'
 import { api } from '../lib/api'
 import { getStorageUrl } from '../lib/storage'
-
-type PlanType = 'gratuito' | 'premium'
 
 export default function ProfileEditScreen() {
   const navigation = useNavigation()
@@ -28,7 +26,6 @@ export default function ProfileEditScreen() {
   const [universities, setUniversities] = useState<{id: number; name: string}[]>([])
   const [showUniversityPicker, setShowUniversityPicker] = useState(false)
   const [course, setCourse] = useState((user as any)?.course || '')
-  const [plan, setPlan] = useState<PlanType>('gratuito')
   const [facebook, setFacebook] = useState((user as any)?.facebook || '')
   const [instagram, setInstagram] = useState((user as any)?.instagram || '')
   const [tiktok, setTiktok] = useState((user as any)?.tiktok || '')
@@ -298,105 +295,7 @@ export default function ProfileEditScreen() {
           </>
         ))}
 
-        {renderSection('Plan de Suscripción', 'diamond-outline', (
-          <>
-            <SegmentedButtons
-              value={plan}
-              onValueChange={(value) => setPlan(value as PlanType)}
-              buttons={[
-                { value: 'gratuito', label: 'Gratuito' },
-                { value: 'premium', label: 'Premium' },
-              ]}
-              style={styles.segmentedButtons}
-            />
-            <View style={[styles.planCard, plan === 'premium' && styles.planCardPremium]}>
-              {plan === 'gratuito' ? (
-                <>
-                  <View style={styles.planHeader}>
-                    <Ionicons name="gift-outline" size={24} color={colors.brandNavy} />
-                    <AppText variant="h3" weight="bold" color="brandNavy" style={{ marginLeft: spacing.sm }}>
-                      Plan Gratuito
-                    </AppText>
-                  </View>
-                  <View style={styles.planFeatures}>
-                    <View style={styles.planFeature}>
-                      <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                      <AppText variant="body" color="textSecondary" style={{ marginLeft: spacing.xs }}>
-                        Hasta 5 pacientes asignados
-                      </AppText>
-                    </View>
-                    <View style={styles.planFeature}>
-                      <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                      <AppText variant="body" color="textSecondary" style={{ marginLeft: spacing.xs }}>
-                        Acceso básico a procedimientos
-                      </AppText>
-                    </View>
-                    <View style={styles.planFeature}>
-                      <Ionicons name="close-circle" size={18} color={colors.error} />
-                      <AppText variant="body" color="textSecondary" style={{ marginLeft: spacing.xs }}>
-                        Sin historial completo
-                      </AppText>
-                    </View>
-                    <View style={styles.planFeature}>
-                      <Ionicons name="close-circle" size={18} color={colors.error} />
-                      <AppText variant="body" color="textSecondary" style={{ marginLeft: spacing.xs }}>
-                        Sin exportación de reportes
-                      </AppText>
-                    </View>
-                  </View>
-                </>
-              ) : (
-                <>
-                  <View style={styles.planHeader}>
-                    <Ionicons name="diamond" size={24} color={colors.brandTurquoise} />
-                    <AppText variant="h3" weight="bold" color="brandTurquoise" style={{ marginLeft: spacing.sm }}>
-                      Plan Premium
-                    </AppText>
-                    <View style={styles.priceBadge}>
-                      <AppText variant="caption" weight="bold" color="white">
-                        Gs. 50.000/mes
-                      </AppText>
-                    </View>
-                  </View>
-                  <View style={styles.planFeatures}>
-                    <View style={styles.planFeature}>
-                      <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                      <AppText variant="body" color="textSecondary" style={{ marginLeft: spacing.xs }}>
-                        Pacientes ilimitados
-                      </AppText>
-                    </View>
-                    <View style={styles.planFeature}>
-                      <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                      <AppText variant="body" color="textSecondary" style={{ marginLeft: spacing.xs }}>
-                        Historial completo
-                      </AppText>
-                    </View>
-                    <View style={styles.planFeature}>
-                      <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                      <AppText variant="body" color="textSecondary" style={{ marginLeft: spacing.xs }}>
-                        Exportación de reportes
-                      </AppText>
-                    </View>
-                    <View style={styles.planFeature}>
-                      <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                      <AppText variant="body" color="textSecondary" style={{ marginLeft: spacing.xs }}>
-                        Soporte prioritario
-                      </AppText>
-                    </View>
-                  </View>
-                  <Button
-                    mode="contained"
-                    buttonColor={colors.brandTurquoise}
-                    style={styles.upgradeButton}
-                    onPress={() => Alert.alert('Premium', 'Funcionalidad de pago próximamente')}
-                  >
-                    Actualizar a Premium
-                  </Button>
-                </>
-              )}
-            </View>
-          </>
-        ))}
+        {/* Plan de Suscripción oculto durante la beta inicial */}
 
         {renderSection('Redes Sociales', 'share-social-outline', (
           <>

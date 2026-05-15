@@ -79,6 +79,12 @@ export function SideMenu({ visible, onClose }: SideMenuProps) {
       icon: 'shield-checkmark-outline',
       route: 'PrivacyPolicy',
     },
+    {
+      id: 'delete-account',
+      label: 'Eliminar Cuenta',
+      icon: 'trash-outline',
+      route: 'DeleteAccount',
+    },
   ]
 
   const handleMenuPress = (item: MenuItem) => {

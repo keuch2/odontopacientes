@@ -29,6 +29,7 @@ import ProfileEditScreen from '../screens/ProfileEditScreen'
 import ProcedureHistoryScreen from '../screens/ProcedureHistoryScreen'
 import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen'
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen'
+import DeleteAccountScreen from '../screens/DeleteAccountScreen'
 import { AppLayout } from '../components/AppLayout'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -108,6 +109,11 @@ function CatedrasStack() {
         name="PrivacyPolicy"
         component={PrivacyPolicyScreen}
         options={{ title: 'Política de Privacidad' }}
+      />
+      <Stack.Screen
+        name="DeleteAccount"
+        component={DeleteAccountScreen}
+        options={{ title: 'Eliminar Cuenta' }}
       />
     </Stack.Navigator>
   )

@@ -28,6 +28,7 @@ import CreateProcedureScreen from '../screens/CreateProcedureScreen'
 import ProfileEditScreen from '../screens/ProfileEditScreen'
 import ProcedureHistoryScreen from '../screens/ProcedureHistoryScreen'
 import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen'
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen'
 import { AppLayout } from '../components/AppLayout'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -98,10 +99,15 @@ function CatedrasStack() {
         component={AssignmentDetailScreen}
         options={{ title: 'Detalle de Asignación' }}
       />
-      <Stack.Screen 
-        name="Odontogram" 
+      <Stack.Screen
+        name="Odontogram"
         component={OdontogramScreen}
         options={{ title: 'Odontograma' }}
+      />
+      <Stack.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicyScreen}
+        options={{ title: 'Política de Privacidad' }}
       />
     </Stack.Navigator>
   )

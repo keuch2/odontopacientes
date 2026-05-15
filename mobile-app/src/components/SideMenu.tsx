@@ -73,6 +73,12 @@ export function SideMenu({ visible, onClose }: SideMenuProps) {
       icon: 'document-text-outline',
       route: 'ProcedureHistory',
     },
+    {
+      id: 'privacy-policy',
+      label: 'Política de Privacidad',
+      icon: 'shield-checkmark-outline',
+      route: 'PrivacyPolicy',
+    },
   ]
 
   const handleMenuPress = (item: MenuItem) => {

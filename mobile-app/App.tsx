@@ -15,6 +15,7 @@ import LoadingScreen from './src/components/LoadingScreen'
 import LoginScreen from './src/screens/LoginScreen'
 import WelcomeScreen from './src/screens/WelcomeScreen'
 import RegisterStep1Screen from './src/screens/RegisterStep1Screen'
+import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen'
 import RegisterStep2Screen from './src/screens/RegisterStep2Screen'
 import RegisterStep3Screen from './src/screens/RegisterStep3Screen'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
@@ -277,6 +278,7 @@ export default function App() {
                     <AuthStack.Screen name="RegisterStep1" component={RegisterStep1Screen} />
                     <AuthStack.Screen name="RegisterStep2" component={RegisterStep2Screen} />
                     <AuthStack.Screen name="RegisterStep3" component={RegisterStep3Screen} />
+                    <AuthStack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
                     <AuthStack.Screen name="Login">
                       {(props) => <LoginScreen {...props} onBackToWelcome={handleBackToWelcome} />}
                     </AuthStack.Screen>

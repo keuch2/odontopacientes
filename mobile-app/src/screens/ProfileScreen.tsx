@@ -1,12 +1,22 @@
 import React from 'react'
-import { View, ScrollView, StyleSheet, Image } from 'react-native'
+import { View, ScrollView, StyleSheet, Image, Linking } from 'react-native'
 import { Card, Text, List, Button, Divider, Avatar } from 'react-native-paper'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useNavigation } from '@react-navigation/native'
 import { useAuthStore } from '../store/auth'
 import { getStorageUrl } from '../lib/storage'
 
 export default function ProfileScreen() {
   const { user, logout } = useAuthStore()
+  const navigation = useNavigation<any>()
+
+  const openPrivacyPolicy = () => {
+    try {
+      navigation.navigate('PrivacyPolicy')
+    } catch {
+      Linking.openURL('https://codexpy.com/odontopacientes/privacidad.html').catch(() => {})
+    }
+  }
 
   const handleLogout = () => {
     logout()
@@ -125,7 +135,7 @@ export default function ProfileScreen() {
               description="Configuración de privacidad y datos"
               left={(props) => <List.Icon {...props} icon="shield-account" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => {/* navegar a privacidad */}}
+              onPress={openPrivacyPolicy}
             />
             <Divider />
             <List.Item
@@ -153,13 +163,13 @@ export default function ProfileScreen() {
               title="Términos y Condiciones"
               left={(props) => <List.Icon {...props} icon="file-document" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => {/* navegar a términos */}}
+              onPress={openPrivacyPolicy}
             />
             <List.Item
               title="Política de Privacidad"
               left={(props) => <List.Icon {...props} icon="shield-check" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => {/* navegar a política */}}
+              onPress={openPrivacyPolicy}
             />
           </Card.Content>
         </Card>

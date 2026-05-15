@@ -14,6 +14,7 @@ export default function RegisterStep1Screen({ navigation }: any) {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [emailCheckMessage, setEmailCheckMessage] = useState<string>('')
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState<boolean>(false)
 
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -137,6 +138,10 @@ export default function RegisterStep1Screen({ navigation }: any) {
       newErrors.confirmPassword = 'Debes confirmar la contraseña'
     } else if (formData.password.trim() !== formData.confirmPassword.trim()) {
       newErrors.confirmPassword = 'Las contraseñas no coinciden'
+    }
+
+    if (!acceptedPrivacy) {
+      newErrors.acceptedPrivacy = 'Debes aceptar la Política de Privacidad para continuar'
     }
 
     setErrors(newErrors)
@@ -410,8 +415,41 @@ export default function RegisterStep1Screen({ navigation }: any) {
             )}
           </View>
 
-          <AppButton 
-            title="Siguiente" 
+          <View style={styles.consentRow}>
+            <TouchableOpacity
+              onPress={() => setAcceptedPrivacy(!acceptedPrivacy)}
+              style={[styles.checkbox, acceptedPrivacy && styles.checkboxChecked]}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: acceptedPrivacy }}
+            >
+              {acceptedPrivacy && (
+                <AppText color="white" weight="bold" style={{ fontSize: 14 }}>
+                  ✓
+                </AppText>
+              )}
+            </TouchableOpacity>
+            <View style={styles.consentTextWrap}>
+              <AppText color="textPrimary" variant="body">
+                Acepto la{' '}
+                <AppText
+                  color="brandTurquoise"
+                  weight="semibold"
+                  onPress={() => navigation.navigate('PrivacyPolicy')}
+                >
+                  Política de Privacidad
+                </AppText>
+                {' '}y autorizo el tratamiento de mis datos personales descritos en ella.
+              </AppText>
+            </View>
+          </View>
+          {errors.acceptedPrivacy && (
+            <AppText color="error" variant="caption" style={styles.errorText}>
+              {errors.acceptedPrivacy}
+            </AppText>
+          )}
+
+          <AppButton
+            title="Siguiente"
             onPress={handleNext}
             fullWidth
             style={styles.nextButton}
@@ -459,6 +497,31 @@ const styles = StyleSheet.create({
   },
   nextButton: {
     marginTop: spacing.md,
+  },
+  consentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: spacing.lg,
+    marginBottom: spacing.xs,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: colors.brandTurquoise,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: colors.brandTurquoise,
+    borderColor: colors.brandTurquoise,
+  },
+  consentTextWrap: {
+    flex: 1,
   },
   spacer: {
     height: spacing.xxl,

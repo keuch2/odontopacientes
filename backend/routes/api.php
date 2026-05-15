@@ -58,6 +58,9 @@ Route::get('/universities', [\App\Http\Controllers\Api\UniversityController::cla
 
 // Rutas protegidas con token demo
 Route::middleware('demo.auth')->group(function () {
+    // Eliminación de cuenta (Apple Guideline 5.1.1(v))
+    Route::delete('/account', [\App\Http\Controllers\Api\AccountController::class, 'destroy']);
+
     // Stats
     Route::get('/stats/dashboard', [\App\Http\Controllers\Api\StatsController::class, 'dashboard']);
     Route::get('/stats/procedures-by-chair', [\App\Http\Controllers\Api\StatsController::class, 'proceduresByChair']);

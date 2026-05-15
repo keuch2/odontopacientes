@@ -174,6 +174,12 @@ class ApiClient {
       this.client.get('/auth/me'),
   }
 
+  // Gestión de cuenta (eliminación requerida por Apple 5.1.1(v))
+  account = {
+    delete: (data: { password: string; confirm: string }): Promise<AxiosResponse<ApiResponse>> =>
+      this.client.delete('/account', { data }),
+  }
+
   // Métodos de cátedras
   chairs = {
     list: (params?: { active?: boolean }): Promise<AxiosResponse<ApiResponse<Chair[]>>> =>

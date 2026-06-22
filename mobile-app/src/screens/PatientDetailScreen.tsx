@@ -7,6 +7,7 @@ import { AppText, AppButton } from '../components/ui'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
 import { api } from '../lib/api'
+import { useIsPremium } from '../store/auth'
 import AddProcedureModal from '../components/AddProcedureModal'
 
 type TabType = 'disponible' | 'proceso' | 'finalizado' | 'cancelado'
@@ -27,6 +28,7 @@ export default function PatientDetailScreen({ navigation }: any) {
   const patientId = params?.patientId
 
   const queryClient = useQueryClient()
+  const isPremium = useIsPremium()
   const [activeTab, setActiveTab] = useState<TabType>('disponible')
   const [addProcedureModalVisible, setAddProcedureModalVisible] = useState(false)
 
@@ -204,24 +206,26 @@ export default function PatientDetailScreen({ navigation }: any) {
             Ficha del Paciente
           </AppText>
         </View>
-        <View style={styles.titleSection}>
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={styles.smallActionButton}
-              onPress={() => setAddProcedureModalVisible(true)}
-            >
-              <Ionicons name="add-circle-outline" size={16} color={colors.white} />
-              <AppText color="white" weight="semibold" style={styles.smallButtonText}>Agregar Procedimiento</AppText>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.smallEditButton}
-              onPress={() => navigation.navigate('EditPatient' as never, { patientId: patient.id } as never)}
-            >
-              <Ionicons name="create-outline" size={16} color={colors.white} />
-              <AppText color="white" weight="semibold" style={styles.smallButtonText}>Editar Ficha</AppText>
-            </TouchableOpacity>
+        {isPremium && (
+          <View style={styles.titleSection}>
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={styles.smallActionButton}
+                onPress={() => setAddProcedureModalVisible(true)}
+              >
+                <Ionicons name="add-circle-outline" size={16} color={colors.white} />
+                <AppText color="white" weight="semibold" style={styles.smallButtonText}>Agregar Procedimiento</AppText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.smallEditButton}
+                onPress={() => navigation.navigate('EditPatient' as never, { patientId: patient.id } as never)}
+              >
+                <Ionicons name="create-outline" size={16} color={colors.white} />
+                <AppText color="white" weight="semibold" style={styles.smallButtonText}>Editar Ficha</AppText>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
 
         <View style={styles.patientCard}>
           <View style={styles.patientCardHeader}>
@@ -231,14 +235,18 @@ export default function PatientDetailScreen({ navigation }: any) {
               <AppText color="white" style={styles.patientMeta}>Género: {patient.gender}</AppText>
               <AppText color="white" style={styles.patientMeta}>Registrado en: {patient.university}</AppText>
             </View>
-            <View style={styles.contactButtons}>
-              <TouchableOpacity style={styles.iconButton} onPress={handleCall}>
-                <Ionicons name="call" size={24} color={colors.white} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.iconButton} onPress={handleWhatsApp}>
-                <Ionicons name="logo-whatsapp" size={24} color={colors.white} />
-              </TouchableOpacity>
-            </View>
+            {/* Botones de contacto solo si hay teléfono visible (el plan
+                Básico no recibe el teléfono del paciente: llega vacío). */}
+            {patient.phone ? (
+              <View style={styles.contactButtons}>
+                <TouchableOpacity style={styles.iconButton} onPress={handleCall}>
+                  <Ionicons name="call" size={24} color={colors.white} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.iconButton} onPress={handleWhatsApp}>
+                  <Ionicons name="logo-whatsapp" size={24} color={colors.white} />
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </View>
         </View>
 
@@ -408,7 +416,7 @@ export default function PatientDetailScreen({ navigation }: any) {
             </View>
           )}
 
-          {activeTab === 'disponible' && (
+          {isPremium && activeTab === 'disponible' && (
             <AppButton
               title="Agendar Nuevo Procedimiento"
               onPress={() => navigation.navigate('ProcedureSchedule', { patientId: 1 })}

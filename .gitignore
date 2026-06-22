@@ -85,3 +85,6 @@ mobile-app/dist/
 
 # Web admin build output
 web-admin/dist/
+
+# Web public build output
+web-public/dist/

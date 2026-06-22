@@ -49,6 +49,11 @@ Route::prefix('auth')->group(function () {
     });
 });
 
+// Suscripción a Premium (Bancard vPOS) — rutas públicas:
+// catálogo de planes y webhook de confirmación de Bancard.
+Route::get('/subscriptions/plans', [\App\Http\Controllers\Api\SubscriptionController::class, 'plans']);
+Route::post('/webhooks/bancard', [\App\Http\Controllers\Api\SubscriptionController::class, 'webhook']);
+
 // Rutas públicas de referencia (chairs, treatments, universities)
 Route::get('/chairs', [\App\Http\Controllers\Api\ChairController::class, 'index']);
 Route::get('/chairs/{chair}', [\App\Http\Controllers\Api\ChairController::class, 'show']);
@@ -60,6 +65,10 @@ Route::get('/universities', [\App\Http\Controllers\Api\UniversityController::cla
 Route::middleware('demo.auth')->group(function () {
     // Eliminación de cuenta (Apple Guideline 5.1.1(v))
     Route::delete('/account', [\App\Http\Controllers\Api\AccountController::class, 'destroy']);
+
+    // Suscripción Premium (Bancard) — iniciar pago y consultar/activar estado.
+    Route::post('/subscriptions/checkout', [\App\Http\Controllers\Api\SubscriptionController::class, 'checkout']);
+    Route::get('/subscriptions/{processId}/status', [\App\Http\Controllers\Api\SubscriptionController::class, 'status']);
 
     // Stats
     Route::get('/stats/dashboard', [\App\Http\Controllers\Api\StatsController::class, 'dashboard']);
@@ -214,19 +223,14 @@ Route::middleware('demo.auth')->group(function () {
     Route::get('/notification-preferences', [\App\Http\Controllers\Api\NotificationPreferencesController::class, 'index']);
     Route::post('/notification-preferences', [\App\Http\Controllers\Api\NotificationPreferencesController::class, 'update']);
     
-    // Assignments
+    // Assignments — LECTURA (permitida a plan Básico)
     Route::get('/my-assignments', [\App\Http\Controllers\Api\AssignmentsController::class, 'myAssignments']);
     Route::get('/my-created-patients', [\App\Http\Controllers\Api\AssignmentsController::class, 'myCreatedPatients']);
     Route::get('/my-assignments/{id}', [\App\Http\Controllers\Api\AssignmentsController::class, 'show']);
-    Route::post('/my-assignments/{id}/complete', [\App\Http\Controllers\Api\AssignmentsController::class, 'complete']);
-    Route::post('/my-assignments/{id}/abandon', [\App\Http\Controllers\Api\AssignmentsController::class, 'abandon']);
-    
-    // Treatment Sessions
+
+    // Treatment Sessions — LECTURA (permitida a plan Básico)
     Route::get('/assignments/{assignmentId}/sessions', [\App\Http\Controllers\Api\TreatmentSessionController::class, 'index']);
-    Route::post('/assignments/{assignmentId}/sessions', [\App\Http\Controllers\Api\TreatmentSessionController::class, 'store']);
-    Route::put('/treatment-sessions/{sessionId}', [\App\Http\Controllers\Api\TreatmentSessionController::class, 'update']);
-    Route::delete('/treatment-sessions/{sessionId}', [\App\Http\Controllers\Api\TreatmentSessionController::class, 'destroy']);
-    
+
     // Chairs CRUD (admin)
     Route::post('/chairs', [\App\Http\Controllers\Api\ChairController::class, 'store']);
     Route::put('/chairs/{chair}', [\App\Http\Controllers\Api\ChairController::class, 'update']);
@@ -257,44 +261,72 @@ Route::middleware('demo.auth')->group(function () {
     Route::put('/universities/{university}', [\App\Http\Controllers\Api\UniversityController::class, 'update']);
     Route::delete('/universities/{university}', [\App\Http\Controllers\Api\UniversityController::class, 'destroy']);
 
-    // Patients
-    Route::apiResource('patients', \App\Http\Controllers\Api\PatientController::class);
-    
-    // Patient Procedures
+    // =========================================================================
+    // LECTURA — permitida a TODOS los planes (incluido Básico).
+    // =========================================================================
+    // Patients (solo GET). OJO: NO declarar el apiResource completo aquí, eso
+    // re-expondría store/update/destroy al plan Básico. La escritura va abajo,
+    // dentro del grupo 'plan.premium'.
+    Route::apiResource('patients', \App\Http\Controllers\Api\PatientController::class)->only(['index', 'show']);
+
+    // Patient Procedures (lectura)
     Route::get('/patients/{patient}/procedures', [\App\Http\Controllers\Api\PatientProcedureController::class, 'index']);
-    Route::post('/patients/{patient}/procedures', [\App\Http\Controllers\Api\PatientProcedureController::class, 'store']);
     Route::get('/patient-procedures/{patientProcedure}', [\App\Http\Controllers\Api\PatientProcedureController::class, 'show']);
-    Route::put('/patient-procedures/{patientProcedure}', [\App\Http\Controllers\Api\PatientProcedureController::class, 'update']);
-    Route::delete('/patient-procedures/{patientProcedure}', [\App\Http\Controllers\Api\PatientProcedureController::class, 'destroy']);
-    Route::post('/patient-procedures/{patientProcedure}/assign', [\App\Http\Controllers\Api\PatientProcedureController::class, 'assign']);
-    Route::post('/patient-procedures/{patientProcedure}/cancel', [\App\Http\Controllers\Api\PatientProcedureController::class, 'cancel']);
-    
-    // Odontograms
+
+    // Odontograms (lectura)
     Route::get('/patients/{patient}/odontograms', [\App\Http\Controllers\Api\OdontogramController::class, 'index']);
-    Route::post('/patients/{patient}/odontograms', [\App\Http\Controllers\Api\OdontogramController::class, 'store']);
     Route::get('/odontograms/{odontogram}', [\App\Http\Controllers\Api\OdontogramController::class, 'show']);
-    Route::put('/odontograms/{odontogram}', [\App\Http\Controllers\Api\OdontogramController::class, 'update']);
-    Route::delete('/odontograms/{odontogram}', [\App\Http\Controllers\Api\OdontogramController::class, 'destroy']);
-    Route::put('/odontograms/{odontogram}/teeth', [\App\Http\Controllers\Api\OdontogramController::class, 'updateTooth']);
-    Route::delete('/odontograms/{odontogram}/teeth/{toothFdi}', [\App\Http\Controllers\Api\OdontogramController::class, 'deleteTooth']);
-    
-    // Odontogram Photos
+
+    // Odontogram Photos (lectura)
     Route::get('/patients/{patient}/odontogram-photos', [\App\Http\Controllers\Api\OdontogramPhotoController::class, 'index']);
-    Route::post('/patients/{patient}/odontogram-photos/base64', [\App\Http\Controllers\Api\OdontogramPhotoController::class, 'storeBase64']);
-    Route::put('/odontogram-photos/{odontogramPhoto}', [\App\Http\Controllers\Api\OdontogramPhotoController::class, 'update']);
-    Route::delete('/odontogram-photos/{odontogramPhoto}', [\App\Http\Controllers\Api\OdontogramPhotoController::class, 'destroy']);
 
-    // Procedure Photos
+    // Procedure Photos (lectura)
     Route::get('/assignments/{assignment}/photos', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'index']);
-    Route::post('/assignments/{assignment}/photos', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'store']);
-    Route::post('/assignments/{assignment}/photos/base64', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'storeBase64']);
-    Route::put('/procedure-photos/{procedurePhoto}', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'update']);
-    Route::delete('/procedure-photos/{procedurePhoto}', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'destroy']);
-
-    // Procedure Photos (by procedure ID, without assignment)
     Route::get('/patient-procedures/{patientProcedure}/photos', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'indexByProcedure']);
-    Route::post('/patient-procedures/{patientProcedure}/photos/base64', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'storeBase64ByProcedure']);
-    
+
+    // =========================================================================
+    // ESCRITURA — solo plan Premium (o admin). Bloqueadas con 403 para Básico.
+    // =========================================================================
+    Route::middleware('plan.premium')->group(function () {
+        // Patients (escritura)
+        Route::apiResource('patients', \App\Http\Controllers\Api\PatientController::class)->only(['store', 'update', 'destroy']);
+
+        // Patient Procedures (escritura)
+        Route::post('/patients/{patient}/procedures', [\App\Http\Controllers\Api\PatientProcedureController::class, 'store']);
+        Route::put('/patient-procedures/{patientProcedure}', [\App\Http\Controllers\Api\PatientProcedureController::class, 'update']);
+        Route::delete('/patient-procedures/{patientProcedure}', [\App\Http\Controllers\Api\PatientProcedureController::class, 'destroy']);
+        Route::post('/patient-procedures/{patientProcedure}/assign', [\App\Http\Controllers\Api\PatientProcedureController::class, 'assign']);
+        Route::post('/patient-procedures/{patientProcedure}/cancel', [\App\Http\Controllers\Api\PatientProcedureController::class, 'cancel']);
+
+        // Odontograms (escritura)
+        Route::post('/patients/{patient}/odontograms', [\App\Http\Controllers\Api\OdontogramController::class, 'store']);
+        Route::put('/odontograms/{odontogram}', [\App\Http\Controllers\Api\OdontogramController::class, 'update']);
+        Route::delete('/odontograms/{odontogram}', [\App\Http\Controllers\Api\OdontogramController::class, 'destroy']);
+        Route::put('/odontograms/{odontogram}/teeth', [\App\Http\Controllers\Api\OdontogramController::class, 'updateTooth']);
+        Route::delete('/odontograms/{odontogram}/teeth/{toothFdi}', [\App\Http\Controllers\Api\OdontogramController::class, 'deleteTooth']);
+
+        // Odontogram Photos (escritura)
+        Route::post('/patients/{patient}/odontogram-photos/base64', [\App\Http\Controllers\Api\OdontogramPhotoController::class, 'storeBase64']);
+        Route::put('/odontogram-photos/{odontogramPhoto}', [\App\Http\Controllers\Api\OdontogramPhotoController::class, 'update']);
+        Route::delete('/odontogram-photos/{odontogramPhoto}', [\App\Http\Controllers\Api\OdontogramPhotoController::class, 'destroy']);
+
+        // Procedure Photos (escritura)
+        Route::post('/assignments/{assignment}/photos', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'store']);
+        Route::post('/assignments/{assignment}/photos/base64', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'storeBase64']);
+        Route::put('/procedure-photos/{procedurePhoto}', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'update']);
+        Route::delete('/procedure-photos/{procedurePhoto}', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'destroy']);
+        Route::post('/patient-procedures/{patientProcedure}/photos/base64', [\App\Http\Controllers\Api\ProcedurePhotoController::class, 'storeBase64ByProcedure']);
+
+        // Treatment Sessions (escritura)
+        Route::post('/assignments/{assignmentId}/sessions', [\App\Http\Controllers\Api\TreatmentSessionController::class, 'store']);
+        Route::put('/treatment-sessions/{sessionId}', [\App\Http\Controllers\Api\TreatmentSessionController::class, 'update']);
+        Route::delete('/treatment-sessions/{sessionId}', [\App\Http\Controllers\Api\TreatmentSessionController::class, 'destroy']);
+
+        // Assignments (acciones de escritura)
+        Route::post('/my-assignments/{id}/complete', [\App\Http\Controllers\Api\AssignmentsController::class, 'complete']);
+        Route::post('/my-assignments/{id}/abandon', [\App\Http\Controllers\Api\AssignmentsController::class, 'abandon']);
+    });
+
     // Endpoint de usuarios - devuelve usuarios de la base de datos
     Route::get('/users', function () {
         $users = \App\Models\User::with('university')
@@ -346,6 +378,40 @@ Route::middleware('demo.auth')->group(function () {
         ]);
     });
     
+    // Endpoint para que un ADMIN active/desactive el plan Premium de un usuario
+    // manualmente (sin pago). El usuario normal no puede auto-asignarse Premium.
+    Route::put('/users/{id}/plan', function (Illuminate\Http\Request $request, $id) {
+        $actor = $request->attributes->get('demo_user');
+        if (($actor['role'] ?? null) !== 'admin') {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $validated = $request->validate([
+            'plan' => 'required|in:basico,premium',
+            'plan_expires_at' => 'nullable|date|after:now',
+        ]);
+
+        $user = \App\Models\User::findOrFail($id);
+        $user->plan = $validated['plan'];
+        // Premium: fecha opcional (null = sin expiración). Básico: limpiar fecha.
+        $user->plan_expires_at = $validated['plan'] === 'premium'
+            ? ($validated['plan_expires_at'] ?? null)
+            : null;
+        $user->save();
+
+        return response()->json([
+            'message' => 'Plan actualizado correctamente',
+            'data' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'plan' => $user->plan,
+                'plan_expires_at' => $user->plan_expires_at,
+                'is_premium' => $user->isPremium(),
+            ],
+        ]);
+    });
+
     // Endpoint para crear nuevo usuario
     Route::post('/users', function (Illuminate\Http\Request $request) {
         $validated = $request->validate([

@@ -25,6 +25,8 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'plan',
+        'plan_expires_at',
         'faculty_id',
         'university_id',
         'phone',
@@ -59,6 +61,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'active' => 'boolean',
+        'plan_expires_at' => 'datetime',
     ];
 
     /**
@@ -144,5 +147,31 @@ class User extends Authenticatable
     public function isStudent(): bool
     {
         return $this->role === 'alumno';
+    }
+
+    /**
+     * Verificar si el usuario tiene plan Premium ACTIVO.
+     *
+     * La expiración se resuelve en tiempo de lectura (no por cron): un plan
+     * 'premium' con plan_expires_at en el pasado se considera vencido y vuelve
+     * a comportarse como 'basico'. plan_expires_at = null = sin expiración.
+     */
+    public function isPremium(): bool
+    {
+        if ($this->plan !== 'premium') {
+            return false;
+        }
+
+        return is_null($this->plan_expires_at) || $this->plan_expires_at->isFuture();
+    }
+
+    /**
+     * Acceso completo: los admin siempre lo tienen; el resto solo con Premium
+     * activo. Es el valor que se expone como `is_premium` en el array demo_user
+     * y el que consulta el middleware de autorización.
+     */
+    public function hasFullAccess(): bool
+    {
+        return $this->isAdmin() || $this->isPremium();
     }
 }

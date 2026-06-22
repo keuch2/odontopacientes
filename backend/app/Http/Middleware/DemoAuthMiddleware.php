@@ -45,35 +45,9 @@ class DemoAuthMiddleware
             $user = $accessToken->tokenable;
             if ($user instanceof User) {
                 $user->load(['faculty.university', 'student']);
-                $userData = [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'role' => $user->role,
-                    'faculty_id' => $user->faculty_id,
-                    'phone' => $user->phone,
-                    'city' => $user->city,
-                    'institution' => $user->institution,
-                    'course' => $user->course,
-                    'facebook' => $user->facebook,
-                    'instagram' => $user->instagram,
-                    'tiktok' => $user->tiktok,
-                    'profile_image' => $user->profile_image,
-                    'birth_date' => $user->birth_date,
-                ];
-                if ($user->faculty) {
-                    $userData['faculty'] = [
-                        'id' => $user->faculty->id,
-                        'name' => $user->faculty->name,
-                    ];
-                }
-                if ($user->student) {
-                    $userData['student'] = [
-                        'id' => $user->student->id,
-                        'student_number' => $user->student->student_number ?? '',
-                        'year' => $user->student->year ?? 1,
-                    ];
-                }
+                // Mismo builder que DemoUserFactory para que el array demo_user
+                // (incluido el plan / is_premium) nunca diverja entre ramas.
+                $userData = DemoUserFactory::buildFromModel($user);
                 $request->attributes->set('demo_user', $userData);
                 return $next($request);
             }

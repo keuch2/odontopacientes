@@ -17,6 +17,12 @@ class PatientController extends Controller
      */
     public function index(Request $request)
     {
+        // El número de contacto del paciente solo es visible para admin o
+        // usuarios con plan Premium activo (plan Básico no ve contactos).
+        $authUser = $request->attributes->get('demo_user');
+        $canSeeContact = ($authUser['role'] ?? null) === 'admin'
+            || (bool) ($authUser['is_premium'] ?? false);
+
         $patients = QueryBuilder::for(Patient::class)
             ->allowedFilters(['city', 'faculty_id', 'created_by'])
             ->allowedSorts(['first_name', 'last_name', 'created_at', 'birthdate'])
@@ -58,7 +64,7 @@ class PatientController extends Controller
             ->paginate($request->per_page ?? 15);
 
         return response()->json([
-            'data' => $patients->map(function ($patient) {
+            'data' => $patients->map(function ($patient) use ($canSeeContact) {
                 return [
                     'id' => $patient->id,
                     'full_name' => $patient->full_name,
@@ -67,7 +73,7 @@ class PatientController extends Controller
                     'age' => $patient->age,
                     'gender' => $patient->gender,
                     'city' => $patient->city,
-                    'phone' => $patient->phone,
+                    'phone' => $canSeeContact ? $patient->phone : null,
                     'document' => $patient->full_document,
                     'faculty' => $patient->faculty ? [
                         'id' => $patient->faculty->id,
@@ -111,8 +117,13 @@ class PatientController extends Controller
     /**
      * Mostrar detalles completos de un paciente
      */
-    public function show(Patient $patient)
+    public function show(Request $request, Patient $patient)
     {
+        // Contacto del paciente solo visible para admin o Premium activo.
+        $authUser = $request->attributes->get('demo_user');
+        $canSeeContact = ($authUser['role'] ?? null) === 'admin'
+            || (bool) ($authUser['is_premium'] ?? false);
+
         $patient->load([
             'faculty.university',
             'createdBy',
@@ -206,9 +217,9 @@ class PatientController extends Controller
                 'is_pediatric' => (bool) $patient->is_pediatric,
                 'city' => $patient->city,
                 'address' => $patient->address,
-                'phone' => $patient->phone,
-                'emergency_contact' => $patient->emergency_contact,
-                'emergency_phone' => $patient->emergency_phone,
+                'phone' => $canSeeContact ? $patient->phone : null,
+                'emergency_contact' => $canSeeContact ? $patient->emergency_contact : null,
+                'emergency_phone' => $canSeeContact ? $patient->emergency_phone : null,
                 'has_allergies' => (bool) $patient->has_allergies,
                 'allergies_description' => $patient->allergies_description,
                 'takes_medication' => (bool) $patient->takes_medication,

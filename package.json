@@ -4,17 +4,21 @@
   "description": "Sistema de gestión de pacientes odontológicos para estudiantes",
   "private": true,
   "workspaces": [
-    "web-admin"
+    "web-admin",
+    "web-public"
   ],
   "scripts": {
     "dev": "pnpm -w --parallel dev",
     "dev:web": "pnpm --filter web-admin dev",
+    "dev:public": "pnpm --filter odontopacientes-web-public dev",
     "dev:mobile": "pnpm --filter mobile-app start",
     "build": "pnpm -w --parallel build",
     "build:web": "pnpm --filter web-admin build",
+    "build:public": "pnpm --filter odontopacientes-web-public build",
     "build:mobile": "pnpm --filter mobile-app build",
     "lint": "pnpm -w --parallel lint",
     "lint:web": "pnpm --filter web-admin lint",
+    "lint:public": "pnpm --filter odontopacientes-web-public lint",
     "lint:mobile": "pnpm --filter mobile-app lint",
     "format": "prettier --write .",
     "gen:types": "node scripts/generate-types.js",

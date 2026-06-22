@@ -1,5 +1,6 @@
 packages:
   - web-admin
+  - web-public
   # mobile-app NO es workspace pnpm: usa npm + package-lock.json propio.
   # Si se declara aquí, EAS Build se confunde y rompe la resolución de plugins.
 

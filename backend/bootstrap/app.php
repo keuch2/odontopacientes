@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'faculty' => \App\Http\Middleware\CheckFaculty::class,
             'api.logger' => \App\Http\Middleware\ApiRequestLogger::class,
             'demo.auth' => \App\Http\Middleware\DemoAuthMiddleware::class,
+            'plan.premium' => \App\Http\Middleware\EnsurePremiumPlan::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -8,6 +8,11 @@ interface User {
   name: string
   email: string
   role: string
+  /** Plan literal para el badge del perfil. */
+  plan?: 'basico' | 'premium'
+  /** Acceso efectivo: admin O premium activo. Lo resuelve el backend. */
+  is_premium?: boolean
+  plan_expires_at?: string | null
   phone?: string
   profile_image?: string
   faculty?: {
@@ -129,3 +134,11 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 )
+
+/**
+ * Indica si el usuario tiene acceso completo (admin o Premium activo).
+ * Se usa para mostrar/ocultar acciones de escritura en la UI. El backend
+ * es la fuente de verdad real (devuelve 403 a Básico); esto es defensa en UI.
+ */
+export const useIsPremium = (): boolean =>
+  useAuthStore((state) => Boolean(state.user?.is_premium))

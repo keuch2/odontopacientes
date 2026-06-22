@@ -6,7 +6,7 @@ import { useNavigation, useRoute } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import { api } from '../lib/api'
-import { useAuthStore } from '../store/auth'
+import { useAuthStore, useIsPremium } from '../store/auth'
 import AddProcedureModal from '../components/AddProcedureModal'
 
 interface PatientProcedure {
@@ -96,6 +96,7 @@ export default function OdontogramScreen() {
   const params = route.params as { patientId: number; isPediatric?: boolean } | undefined
 
   const { user } = useAuthStore()
+  const isPremium = useIsPremium()
   const [procedures, setProcedures] = useState<PatientProcedure[]>([])
   const [chairs, setChairs] = useState<Chair[]>([])
   const [loading, setLoading] = useState(true)
@@ -561,19 +562,21 @@ export default function OdontogramScreen() {
         </Surface>
 
         {/* Prótesis selector */}
-        <Surface style={styles.quickSelectContainer}>
-          <Text style={styles.quickSelectTitle}>Prótesis</Text>
-          <View style={styles.quickSelectRow}>
-            <Button mode={getActiveProsthesis('upper') ? 'contained' : 'outlined'} onPress={() => handleProsthesis('upper')} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel} disabled={prosthesisLoading}>Completo Superior</Button>
-            <Button mode={getActiveProsthesis('lower') ? 'contained' : 'outlined'} onPress={() => handleProsthesis('lower')} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel} disabled={prosthesisLoading}>Completo Inferior</Button>
-          </View>
-          {prosthesisLoading && (
-            <View style={styles.selectedTeethInfo}>
-              <ActivityIndicator size="small" />
-              <Text style={styles.selectedTeethInfoText}>Creando prótesis...</Text>
+        {isPremium && (
+          <Surface style={styles.quickSelectContainer}>
+            <Text style={styles.quickSelectTitle}>Prótesis</Text>
+            <View style={styles.quickSelectRow}>
+              <Button mode={getActiveProsthesis('upper') ? 'contained' : 'outlined'} onPress={() => handleProsthesis('upper')} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel} disabled={prosthesisLoading}>Completo Superior</Button>
+              <Button mode={getActiveProsthesis('lower') ? 'contained' : 'outlined'} onPress={() => handleProsthesis('lower')} compact style={styles.quickSelectButton} labelStyle={styles.quickSelectLabel} disabled={prosthesisLoading}>Completo Inferior</Button>
             </View>
-          )}
-        </Surface>
+            {prosthesisLoading && (
+              <View style={styles.selectedTeethInfo}>
+                <ActivityIndicator size="small" />
+                <Text style={styles.selectedTeethInfoText}>Creando prótesis...</Text>
+              </View>
+            )}
+          </Surface>
+        )}
 
         {/* Detalles del diente seleccionado (solo si hay 1) */}
         {selectedTeeth.size === 1 && (() => {
@@ -658,20 +661,22 @@ export default function OdontogramScreen() {
         <Surface style={styles.photoGallerySection}>
           <View style={styles.photoGalleryHeader}>
             <Text style={styles.photoGalleryTitle}>Galería de Fotos</Text>
-            <TouchableOpacity
-              style={styles.addPhotoBtn}
-              onPress={showPhotoOptions}
-              disabled={uploadingPhoto}
-            >
-              {uploadingPhoto ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  <Ionicons name="camera" size={16} color="#fff" />
-                  <Text style={styles.addPhotoBtnText}>Agregar</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            {isPremium && (
+              <TouchableOpacity
+                style={styles.addPhotoBtn}
+                onPress={showPhotoOptions}
+                disabled={uploadingPhoto}
+              >
+                {uploadingPhoto ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="camera" size={16} color="#fff" />
+                    <Text style={styles.addPhotoBtnText}>Agregar</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
 
           {photosLoading ? (
@@ -697,7 +702,9 @@ export default function OdontogramScreen() {
             <View style={styles.emptyPhotos}>
               <Ionicons name="images-outline" size={40} color="#9CA3AF" />
               <Text style={styles.emptyPhotosText}>No hay fotos del odontograma</Text>
-              <Text style={styles.emptyPhotosSubtext}>Toca "Agregar" para subir fotos de la dentadura</Text>
+              {isPremium && (
+                <Text style={styles.emptyPhotosSubtext}>Toca "Agregar" para subir fotos de la dentadura</Text>
+              )}
             </View>
           )}
         </Surface>
@@ -748,7 +755,7 @@ export default function OdontogramScreen() {
                   ) : (
                     <TouchableOpacity
                       onPress={() => {
-                        if (selectedPhoto.created_by?.id === user?.id) {
+                        if (isPremium && selectedPhoto.created_by?.id === user?.id) {
                           setEditingDescription(true)
                         }
                       }}
@@ -761,7 +768,7 @@ export default function OdontogramScreen() {
                 </View>
 
                 <View style={styles.modalButtons}>
-                  {selectedPhoto.created_by?.id === user?.id && (
+                  {isPremium && selectedPhoto.created_by?.id === user?.id && (
                     <>
                       <TouchableOpacity
                         style={styles.modalEditBtn}
@@ -793,12 +800,14 @@ export default function OdontogramScreen() {
       </Modal>
 
       {/* FAB para agregar procedimiento */}
-      <FAB
-        icon="plus"
-        style={[styles.fab, selectedTeeth.size === 0 && styles.fabDisabled]}
-        onPress={handleAddProcedure}
-        label={selectedTeeth.size > 0 ? `Procedimiento (${selectedTeeth.size} dientes)` : 'Seleccionar dientes'}
-      />
+      {isPremium && (
+        <FAB
+          icon="plus"
+          style={[styles.fab, selectedTeeth.size === 0 && styles.fabDisabled]}
+          onPress={handleAddProcedure}
+          label={selectedTeeth.size > 0 ? `Procedimiento (${selectedTeeth.size} dientes)` : 'Seleccionar dientes'}
+        />
+      )}
 
       {/* Modal para agregar procedimiento */}
       <AddProcedureModal

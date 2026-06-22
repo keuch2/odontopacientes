@@ -8,7 +8,7 @@ import { AppText } from '../components/ui'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
 import { api } from '../lib/api'
-import { useAuthStore } from '../store/auth'
+import { useAuthStore, useIsPremium } from '../store/auth'
 
 interface ProcedurePhoto {
   id: number
@@ -71,6 +71,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
   const { assignmentId, procedureId: routeProcedureId } = route.params || {}
   const queryClient = useQueryClient()
   const { user } = useAuthStore()
+  const isPremium = useIsPremium()
 
   // Assignment states
   const [completeModalVisible, setCompleteModalVisible] = useState(false)
@@ -636,7 +637,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
         </View>
 
         {/* Action buttons for unassigned procedures */}
-        {procedureStatus === 'disponible' && (
+        {isPremium && procedureStatus === 'disponible' && (
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: colors.success }]}
             onPress={handleAssign}
@@ -652,7 +653,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
         )}
 
         {/* Cancel button for creator */}
-        {isUserCreator() && procedureStatus !== 'finalizado' && procedureStatus !== 'cancelado' && (
+        {isPremium && isUserCreator() && procedureStatus !== 'finalizado' && procedureStatus !== 'cancelado' && (
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: '#DC2626', marginBottom: spacing.md }]}
             onPress={handleCancel}
@@ -735,7 +736,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
             <AppText variant="h3" weight="bold" color="brandNavy">Tratamiento</AppText>
-            {canEdit() && (
+            {isPremium && canEdit() && (
               <TouchableOpacity style={styles.editProcedureBtn} onPress={openEditModal}>
                 <Ionicons name="pencil" size={16} color={colors.brandNavy} />
                 <AppText color="brandNavy" weight="semibold" style={{ marginLeft: 4, fontSize: 12 }}>Editar</AppText>
@@ -823,7 +824,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
           <View style={styles.section}>
             <View style={styles.sessionsSectionHeader}>
               <AppText variant="h3" weight="bold" color="brandNavy">Historial de Sesiones</AppText>
-              {isAssignmentActive && isUserAssigned() && (
+              {isPremium && isAssignmentActive && isUserAssigned() && (
                 <TouchableOpacity style={styles.addSessionButton} onPress={handleAddSession}>
                   <Ionicons name="add-circle" size={20} color={colors.white} />
                   <AppText style={styles.addSessionButtonText}>Registrar</AppText>
@@ -845,7 +846,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
                       <AppText variant="body" weight="semibold" color="brandNavy">
                         {formatSessionDate(session.session_date)}
                       </AppText>
-                      {isAssignmentActive && isUserAssigned() && (
+                      {isPremium && isAssignmentActive && isUserAssigned() && (
                         <View style={styles.sessionActions}>
                           <TouchableOpacity onPress={() => handleEditSession(session)} style={styles.sessionActionButton}>
                             <Ionicons name="pencil" size={16} color={colors.brandTurquoise} />
@@ -926,7 +927,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
         <View style={styles.section}>
           <View style={styles.photosSectionHeader}>
             <AppText variant="h3" weight="bold" color="brandNavy">Fotos del Procedimiento</AppText>
-            {canEditPhotos() && (
+            {isPremium && canEditPhotos() && (
               <TouchableOpacity style={styles.addPhotoButton} onPress={showPhotoOptions} disabled={uploadingPhoto}>
                 {uploadingPhoto ? <ActivityIndicator size="small" color={colors.white} /> : (
                   <>
@@ -953,7 +954,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
             <View style={styles.noPhotosContainer}>
               <Ionicons name="images-outline" size={48} color={colors.textSecondary} />
               <AppText color="textMuted" style={styles.noPhotosText}>No hay fotos disponibles</AppText>
-              {canEditPhotos() && (
+              {isPremium && canEditPhotos() && (
                 <AppText color="textMuted" style={{ fontSize: 12, marginTop: 4 }}>
                   Toca "Agregar" para subir fotos del procedimiento
                 </AppText>
@@ -977,15 +978,19 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
               <AppText style={styles.odontogramButtonText}>Ver Odontograma</AppText>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.completeButton} onPress={handleComplete}>
-              <Ionicons name="checkmark-circle" size={20} color="#fff" />
-              <AppText style={styles.completeButtonText}>Completar Tratamiento</AppText>
-            </TouchableOpacity>
+            {isPremium && (
+              <TouchableOpacity style={styles.completeButton} onPress={handleComplete}>
+                <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                <AppText style={styles.completeButtonText}>Completar Tratamiento</AppText>
+              </TouchableOpacity>
+            )}
 
-            <TouchableOpacity style={styles.abandonButton} onPress={handleAbandon}>
-              <Ionicons name="close-circle-outline" size={20} color={colors.error} />
-              <AppText style={styles.abandonButtonText}>Abandonar Caso</AppText>
-            </TouchableOpacity>
+            {isPremium && (
+              <TouchableOpacity style={styles.abandonButton} onPress={handleAbandon}>
+                <Ionicons name="close-circle-outline" size={20} color={colors.error} />
+                <AppText style={styles.abandonButtonText}>Abandonar Caso</AppText>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -1033,7 +1038,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
                     </>
                   )}
                 </View>
-                {canEditPhotos() && !editingDescription && (
+                {isPremium && canEditPhotos() && !editingDescription && (
                   <View style={{ flexDirection: 'row', justifyContent: 'center', gap: spacing.md, marginTop: spacing.md }}>
                     <TouchableOpacity style={styles.photoActionBtn} onPress={() => setEditingDescription(true)}>
                       <Ionicons name="pencil" size={20} color={colors.white} />

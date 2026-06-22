@@ -295,7 +295,32 @@ export default function ProfileEditScreen() {
           </>
         ))}
 
-        {/* Plan de Suscripción oculto durante la beta inicial */}
+        {/* Plan actual — badge informativo de solo lectura. SIN CTA de compra,
+            SIN precio, SIN mención de pago (restricción App Store). */}
+        {renderSection('Plan', 'ribbon-outline', (
+          <View style={[styles.planCard, user?.is_premium && styles.planCardPremium]}>
+            <View style={styles.planHeader}>
+              <Ionicons
+                name={user?.is_premium ? 'star' : 'star-outline'}
+                size={20}
+                color={user?.is_premium ? colors.brandTurquoise : colors.textSecondary}
+              />
+              <AppText
+                variant="h3"
+                weight="bold"
+                color="brandNavy"
+                style={{ marginLeft: spacing.sm }}
+              >
+                {user?.plan === 'premium' ? 'Plan Premium' : 'Plan Básico'}
+              </AppText>
+            </View>
+            <AppText variant="body" color="textSecondary">
+              {user?.is_premium
+                ? 'Tenés acceso completo a todas las funciones de la aplicación.'
+                : 'Con el plan Básico podés navegar y consultar la información disponible.'}
+            </AppText>
+          </View>
+        ))}
 
         {renderSection('Redes Sociales', 'share-social-outline', (
           <>

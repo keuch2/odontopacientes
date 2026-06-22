@@ -8,6 +8,7 @@
 #   --all         Deploy completo (backend + web-admin)
 #   --backend     Solo actualizar backend (git pull + composer)
 #   --web-admin   Solo rebuildar y subir web-admin
+#   --web-public  Solo rebuildar y subir el sitio público (raíz: registro+pago)
 #   --db-sync     Sincronizar base de datos local → producción
 #   --ssh         Abrir sesión SSH al servidor
 #
@@ -28,6 +29,7 @@ PHP="/opt/php8-3/bin/php-cli"
 # Configuración local
 LOCAL_PATH="$(cd "$(dirname "$0")" && pwd)"
 WEB_ADMIN_PATH="$LOCAL_PATH/web-admin"
+WEB_PUBLIC_PATH="$LOCAL_PATH/web-public"
 PRODUCTION_API_URL="https://codexpy.com/odontopacientes/api"
 
 # Colores
@@ -133,6 +135,44 @@ chown codexpy:codexpy $PUBLIC_PATH/web-admin/.htaccess"
     log_ok "=== Web Admin desplegado exitosamente ==="
 }
 
+# ---- DEPLOY WEB PUBLIC (sitio de registro + pago, en /odontopacientes/app/) ----
+deploy_web_public() {
+    log_info "=== Desplegando Web Public (sitio de registro/pago) ==="
+
+    # 1. Build con base /odontopacientes/app/ (configurado en vite.config.ts).
+    #    Se sirve desde un subdirectorio, igual que el web-admin, para NO tocar
+    #    la raíz (que es el front controller de Laravel / la API).
+    log_info "Construyendo web-public..."
+    cd "$WEB_PUBLIC_PATH"
+    npm run build
+    log_ok "Build completado"
+
+    # 2. Subir al subdirectorio app/ (con --delete acotado SOLO a esa carpeta).
+    log_info "Subiendo archivos al servidor (/app/)..."
+    sshpass -p "$SERVER_PASS" rsync -avz --delete \
+        -e "ssh -p$SERVER_PORT -o StrictHostKeyChecking=no" \
+        "$WEB_PUBLIC_PATH/dist/" \
+        "$SERVER_USER@$SERVER_IP:$PUBLIC_PATH/app/"
+    log_ok "Archivos subidos"
+
+    # 3. .htaccess de SPA routing dentro de app/ (mismo patrón que web-admin).
+    ssh_exec "cat > $PUBLIC_PATH/app/.htaccess << 'EOF'
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /odontopacientes/app/
+  RewriteRule ^index\.html\$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /odontopacientes/app/index.html [L]
+</IfModule>
+EOF
+chown codexpy:codexpy $PUBLIC_PATH/app/.htaccess"
+    log_ok "SPA routing (/app/) configurado"
+
+    log_ok "=== Web Public desplegado exitosamente ==="
+    log_warn "Verificá manualmente: https://codexpy.com/odontopacientes/app/ (público)"
+}
+
 # ---- SYNC DATABASE ----
 sync_database() {
     log_info "=== Sincronizando Base de Datos ==="
@@ -205,6 +245,10 @@ case "${1:-}" in
         deploy_web_admin
         test_production
         ;;
+    --web-public)
+        deploy_web_public
+        test_production
+        ;;
     --db-sync)
         sync_database
         ;;
@@ -220,7 +264,7 @@ case "${1:-}" in
         test_production
         ;;
     *)
-        echo "Uso: $0 [--all|--backend|--web-admin|--db-sync|--ssh|--test]"
+        echo "Uso: $0 [--all|--backend|--web-admin|--web-public|--db-sync|--ssh|--test]"
         exit 1
         ;;
 esac

@@ -3,10 +3,12 @@ import { View, StyleSheet, Modal, TouchableOpacity, ScrollView, ActivityIndicato
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import { Surface, IconButton } from 'react-native-paper'
+import { Ionicons } from '@expo/vector-icons'
 import { AppText, AppButton } from '../components/ui'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
 import { api } from '../lib/api'
+import { useIsPremium } from '../store/auth'
 
 interface Assignment {
   id: number
@@ -30,6 +32,7 @@ interface Assignment {
 
 export default function AddScreen() {
   const navigation = useNavigation<any>()
+  const isPremium = useIsPremium()
   const [showProcedureModal, setShowProcedureModal] = useState(false)
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [loading, setLoading] = useState(false)
@@ -72,23 +75,36 @@ export default function AddScreen() {
         <AppText color="textMuted" style={styles.description}>
           Selecciona qué deseas agregar
         </AppText>
-        
-        <View style={styles.buttonContainer}>
-          <AppButton
-            title="Agregar Paciente"
-            onPress={() => navigation.navigate('CreatePatient' as never)}
-            variant="primary"
-            fullWidth
-            style={styles.button}
-          />
-          <AppButton
-            title="Registrar Procedimiento"
-            onPress={handleOpenProcedureModal}
-            variant="secondary"
-            fullWidth
-            style={styles.button}
-          />
-        </View>
+
+        {isPremium ? (
+          <View style={styles.buttonContainer}>
+            <AppButton
+              title="Agregar Paciente"
+              onPress={() => navigation.navigate('CreatePatient' as never)}
+              variant="primary"
+              fullWidth
+              style={styles.button}
+            />
+            <AppButton
+              title="Registrar Procedimiento"
+              onPress={handleOpenProcedureModal}
+              variant="secondary"
+              fullWidth
+              style={styles.button}
+            />
+          </View>
+        ) : (
+          <View style={styles.lockedContainer}>
+            <Ionicons name="lock-closed-outline" size={48} color={colors.textMuted} />
+            <AppText weight="semibold" color="brandNavy" style={styles.lockedTitle}>
+              No disponible en tu plan
+            </AppText>
+            <AppText color="textMuted" style={styles.lockedText}>
+              Tu plan actual te permite consultar la información, pero no crear ni
+              registrar. Podés seguir navegando los pacientes y procedimientos.
+            </AppText>
+          </View>
+        )}
       </View>
 
       <Modal
@@ -174,6 +190,18 @@ const styles = StyleSheet.create({
   },
   button: {
     marginBottom: spacing.sm,
+  },
+  lockedContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.md,
+  },
+  lockedTitle: {
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  lockedText: {
+    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,

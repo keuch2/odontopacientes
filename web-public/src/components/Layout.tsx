@@ -17,8 +17,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <Link to="/" className="flex items-center gap-2 font-bold text-brand-navy">
-            <span className="text-brand-turquoise">Odonto</span>Pacientes
+          <Link to="/" className="flex items-center">
+            <img
+              src={`${import.meta.env.BASE_URL}logo-app.png`}
+              alt="OdontoPacientes"
+              className="h-9"
+            />
           </Link>
 
           <nav className="hidden items-center gap-4 sm:flex">

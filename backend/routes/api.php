@@ -339,6 +339,9 @@ Route::middleware('demo.auth')->group(function () {
                     'email' => $user->email,
                     'role' => $user->role,
                     'active' => (bool) $user->active,
+                    'plan' => $user->plan,
+                    'plan_expires_at' => $user->plan_expires_at,
+                    'is_premium' => $user->isPremium(),
                     'phone' => $user->phone,
                     'birth_date' => $user->birth_date,
                     'profile_image' => $user->profile_image,
@@ -351,7 +354,7 @@ Route::middleware('demo.auth')->group(function () {
                     'updated_at' => $user->updated_at,
                 ];
             });
-        
+
         return response()->json([
             'data' => $users
         ]);

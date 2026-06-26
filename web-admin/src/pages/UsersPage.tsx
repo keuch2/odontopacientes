@@ -9,6 +9,9 @@ interface SystemUser {
   phone: string
   role: 'admin' | 'coordinador' | 'admision' | 'alumno'
   active: boolean
+  plan: 'basico' | 'premium'
+  plan_expires_at: string | null
+  is_premium: boolean
   birth_date: string | null
   profile_image: string | null
   university_id: number | null
@@ -160,12 +163,37 @@ export default function UsersPage() {
   const handleToggleActive = async (user: SystemUser) => {
     try {
       const response = await apiClient.put(`/users/${user.id}/toggle-active`)
-      
+
       // Actualizar la lista de usuarios
       setUsers(users.map(u => u.id === user.id ? response.data.data : u))
     } catch (err: any) {
       console.error('Error toggling user active:', err)
       alert('Error al cambiar estado: ' + (err.response?.data?.message || err.message))
+    }
+  }
+
+  // El admin activa Premium sin pago (o lo quita). Por defecto sin fecha de
+  // expiración (Premium permanente); opcionalmente se puede indicar una fecha.
+  const handleTogglePlan = async (user: SystemUser) => {
+    try {
+      let payload: { plan: 'basico' | 'premium'; plan_expires_at?: string | null }
+
+      if (user.plan === 'premium') {
+        if (!confirm(`¿Quitar el plan Premium a ${user.name}? Volverá al plan Básico.`)) return
+        payload = { plan: 'basico' }
+      } else {
+        if (!confirm(`¿Activar el plan Premium a ${user.name} sin costo?\n\nDejá vacío para Premium permanente, o indicá una fecha de vencimiento.`)) return
+        const date = prompt('Fecha de vencimiento (AAAA-MM-DD). Vacío = sin vencimiento:', '')
+        payload = { plan: 'premium', plan_expires_at: date && date.trim() ? date.trim() : null }
+      }
+
+      const response = await apiClient.put(`/users/${user.id}/plan`, payload)
+      const updated = response.data.data
+      // El endpoint /plan devuelve campos parciales; fusionamos con el usuario actual.
+      setUsers(users.map(u => u.id === user.id ? { ...u, ...updated } : u))
+    } catch (err: any) {
+      console.error('Error toggling user plan:', err)
+      alert('Error al cambiar el plan: ' + (err.response?.data?.message || err.message))
     }
   }
 
@@ -253,6 +281,9 @@ export default function UsersPage() {
                 <span className={`badge ${user.active ? 'badge-green' : 'badge-gray'}`}>
                   {user.active ? 'activo' : 'inactivo'}
                 </span>
+                <span className={`badge ${user.plan === 'premium' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'}`}>
+                  {user.plan === 'premium' ? 'Premium' : 'Básico'}
+                </span>
               </div>
             </div>
 
@@ -277,12 +308,25 @@ export default function UsersPage() {
                 <Shield className="h-4 w-4 mr-2" />
                 Registrado: {new Date(user.created_at).toLocaleDateString('es-PY')}
               </div>
+              {user.plan === 'premium' && user.plan_expires_at && (
+                <div className="flex items-center text-sm text-amber-700">
+                  <Shield className="h-4 w-4 mr-2" />
+                  Premium hasta: {new Date(user.plan_expires_at).toLocaleDateString('es-PY')}
+                </div>
+              )}
             </div>
 
-            <div className="mt-4 pt-4 border-t border-slate-200 flex gap-2">
+            <div className="mt-4 pt-4 border-t border-slate-200 flex flex-wrap gap-2">
               <button onClick={() => handleEdit(user)} className="btn btn-outline btn-sm flex-1">Editar</button>
               <button onClick={() => handleToggleActive(user)} className="btn btn-primary btn-sm flex-1">
                 {user.active ? 'Desactivar' : 'Activar'}
+              </button>
+              <button
+                onClick={() => handleTogglePlan(user)}
+                className={`btn btn-sm w-full ${user.plan === 'premium' ? 'btn-outline' : 'btn-primary'}`}
+                title="Activar o quitar el plan Premium sin costo"
+              >
+                {user.plan === 'premium' ? 'Quitar Premium' : 'Activar Premium'}
               </button>
             </div>
           </div>

@@ -45,7 +45,6 @@ backend/storage/framework/sessions
 backend/storage/framework/views
 backend/storage/logs
 backend/bootstrap/cache/*.php
-backend/composer.lock
 
 # React Native específico
 mobile-app/.expo/

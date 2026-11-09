@@ -68,6 +68,7 @@ jobs:
     - name: Verify structure
       working-directory: backend
       run: |
+        mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
         php artisan --version
         echo "✅ Backend OK"
       env:

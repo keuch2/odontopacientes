@@ -25,21 +25,6 @@ class DemoAuthMiddleware
 
         $token = substr($authorization, 7);
 
-        // Try demo token first
-        if (str_starts_with($token, 'demo-token-')) {
-            $encodedEmail = substr($token, strlen('demo-token-'));
-            $email = base64_decode(strtr($encodedEmail, '-_', '+/'));
-
-            if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $user = DemoUserFactory::getUserByEmail($email);
-                if ($user) {
-                    $request->attributes->set('demo_user', $user);
-                    return $next($request);
-                }
-            }
-        }
-
-        // Try Sanctum token
         $accessToken = PersonalAccessToken::findToken($token);
         if ($accessToken) {
             $user = $accessToken->tokenable;

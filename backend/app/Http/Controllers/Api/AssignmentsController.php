@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use App\Models\Assignment;
-use App\Support\DemoUserFactory;
 
 class AssignmentsController extends Controller
 {
@@ -13,23 +12,7 @@ class AssignmentsController extends Controller
     {
         // Obtener usuario desde el middleware demo.auth
         $user = $request->attributes->get('demo_user');
-        
-        // Si no hay usuario en el request, usar DemoUserFactory como fallback
-        if (!$user) {
-            try {
-                $authHeader = $request->header('Authorization');
-                if ($authHeader && str_starts_with($authHeader, 'Bearer ')) {
-                    $token = substr($authHeader, 7);
-                    $email = base64_decode(str_replace(['-', '_'], ['+', '/'], substr($token, 11)));
-                    if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                        $user = DemoUserFactory::getUserByEmail($email);
-                    }
-                }
-            } catch (\Exception $e) {
-                \Log::warning('myAssignments: token parsing failed', ['error' => $e->getMessage()]);
-            }
-        }
-        
+
         if (!$user || !in_array($user['role'] ?? '', ['alumno', 'admin', 'coordinador'])) {
             return response()->json([
                 'message' => 'No autorizado',
@@ -90,16 +73,7 @@ class AssignmentsController extends Controller
     public function myCreatedPatients(Request $request)
     {
         $user = $request->attributes->get('demo_user');
-        
-        if (!$user) {
-            $authHeader = $request->header('Authorization');
-            if ($authHeader && str_starts_with($authHeader, 'Bearer ')) {
-                $token = substr($authHeader, 7);
-                $email = base64_decode(str_replace(['-', '_'], ['+', '/'], substr($token, 11)));
-                $user = DemoUserFactory::getUserByEmail($email);
-            }
-        }
-        
+
         if (!$user) {
             return response()->json(['message' => 'No autorizado', 'data' => []], 403);
         }
@@ -124,22 +98,11 @@ class AssignmentsController extends Controller
     {
         // Obtener usuario
         $user = $request->attributes->get('demo_user');
-        
+
         if (!$user) {
-            try {
-                $authHeader = $request->header('Authorization');
-                if ($authHeader && str_starts_with($authHeader, 'Bearer ')) {
-                    $token = substr($authHeader, 7);
-                    $email = base64_decode(str_replace(['-', '_'], ['+', '/'], substr($token, 11)));
-                    if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                        $user = DemoUserFactory::getUserByEmail($email);
-                    }
-                }
-            } catch (\Exception $e) {
-                \Log::warning('assignment show: token parsing failed', ['error' => $e->getMessage()]);
-            }
+            return response()->json(['message' => 'No autorizado'], 403);
         }
-        
+
         // Buscar asignación en la base de datos
         $assignment = Assignment::with([
                 'patientProcedure.patient',

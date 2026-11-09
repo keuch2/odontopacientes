@@ -31,17 +31,6 @@ class AccountController extends Controller
 
         if (is_array($userAttr) && isset($userAttr['id'])) {
             $userId = $userAttr['id'];
-        } else {
-            $bearer = $request->bearerToken();
-            if ($bearer && str_starts_with($bearer, 'DEMO_')) {
-                $decoded = base64_decode(substr($bearer, 5), true);
-                if ($decoded) {
-                    $found = User::where('email', $decoded)->first();
-                    if ($found) {
-                        $userId = $found->id;
-                    }
-                }
-            }
         }
 
         if (!$userId) {

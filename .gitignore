@@ -88,3 +88,6 @@ web-admin/dist/
 
 # Web public build output
 web-public/dist/
+
+# Script de deploy: solo local
+/deploy.sh

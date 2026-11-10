@@ -115,17 +115,13 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           })
-        } catch (error) {
-          console.error('Token inválido:', error)
-          // Token inválido, limpiar estado
-          api.setAuthToken(null)
-          queryClient.clear()
-          set({
-            user: null,
-            token: null,
-            isAuthenticated: false,
-            isLoading: false,
-          })
+        } catch (error: any) {
+          // Sin conexión se conserva la sesión; solo un 401 la invalida.
+          if (error?.response?.status === 401) {
+            clearLocalSession()
+          } else {
+            set({ isLoading: false })
+          }
         }
       },
     }),
@@ -140,6 +136,18 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 )
+
+function clearLocalSession() {
+  queryClient.clear()
+  useAuthStore.setState({
+    user: null,
+    token: null,
+    isAuthenticated: false,
+    isLoading: false,
+  })
+}
+
+api.setOnUnauthorized(clearLocalSession)
 
 /**
  * Indica si el usuario tiene acceso completo (admin o Premium activo).

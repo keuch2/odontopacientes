@@ -9,3 +9,11 @@ export const queryClient = new QueryClient({
     },
   },
 })
+
+let refreshTimer: ReturnType<typeof setTimeout> | undefined
+
+/** Marca los datos como obsoletos tras una escritura y agrupa las ráfagas. */
+export const refreshCachedData = () => {
+  clearTimeout(refreshTimer)
+  refreshTimer = setTimeout(() => queryClient.invalidateQueries(), 300)
+}

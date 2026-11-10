@@ -155,6 +155,7 @@ export default function App() {
   useEffect(() => {
     if (isAuthenticated) {
       setShowWelcome(false)
+      setShowRegister(false)
     }
     console.log('[App] isAuthenticated state changed:', isAuthenticated);
   }, [isAuthenticated])
@@ -265,7 +266,9 @@ export default function App() {
                 ) : showRegister ? (
                   console.log('[App] Rendering AuthStack.Navigator for registration flow'),
                   <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-                    <AuthStack.Screen name="RegisterStep1" component={RegisterStep1Screen} />
+                    <AuthStack.Screen name="RegisterStep1">
+                      {(props) => <RegisterStep1Screen {...props} onBackToWelcome={handleBackToWelcome} />}
+                    </AuthStack.Screen>
                     <AuthStack.Screen name="RegisterStep2" component={RegisterStep2Screen} />
                     <AuthStack.Screen name="RegisterStep3" component={RegisterStep3Screen} />
                     <AuthStack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />

@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosResponse } from 'axios'
 import Constants from 'expo-constants'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Platform } from 'react-native'
+import { refreshCachedData } from './queryClient'
 
 // Configuración de la API con detección automática de plataforma
 const getApiBaseUrl = () => {
@@ -98,6 +99,7 @@ interface Chair {
 class ApiClient {
   private client: AxiosInstance
   private authToken: string | null = null
+  private onUnauthorized?: () => void
 
   constructor() {
     this.client = axios.create({
@@ -127,16 +129,26 @@ class ApiClient {
 
     // Interceptor para responses
     this.client.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        const { method, url } = response.config
+        if (method !== 'get' && !url?.startsWith('/auth/')) {
+          refreshCachedData()
+        }
+        return response
+      },
       (error) => {
-        if (error.response?.status === 401) {
-          // Token expirado o inválido
+        // Un 401 en el login son credenciales incorrectas, no una sesión vencida.
+        if (error.response?.status === 401 && error.config?.url !== '/auth/login') {
           this.setAuthToken(null)
-          // Aquí podrías disparar un evento para forzar logout
+          this.onUnauthorized?.()
         }
         return Promise.reject(error)
       }
     )
+  }
+
+  setOnUnauthorized(handler: () => void) {
+    this.onUnauthorized = handler
   }
 
   setAuthToken(token: string | null) {
@@ -212,6 +224,25 @@ class ApiClient {
     }): Promise<AxiosResponse<PaginatedResponse<Patient>>> =>
       this.client.get('/patients', { params }),
 
+    searchAll: async (params?: {
+      q?: string
+      chair_id?: number
+      treatments?: number[]
+      tooth_fdi?: string
+      treatment_subclass_id?: number
+    }): Promise<Patient[]> => {
+      const patients: Patient[] = []
+      let page = 1
+      let lastPage = 1
+      do {
+        const response = await this.client.get('/patients', { params: { ...params, page, per_page: 100 } })
+        patients.push(...(response.data.data || []))
+        lastPage = response.data.meta?.last_page ?? 1
+        page++
+      } while (page <= lastPage)
+      return patients
+    },
+
     get: (id: number): Promise<AxiosResponse<ApiResponse<Patient>>> =>
       this.client.get(`/patients/${id}`),
 
@@ -232,6 +263,9 @@ class ApiClient {
 
     createForPatient: (patientId: number, data: any): Promise<AxiosResponse<ApiResponse>> =>
       this.client.post(`/patients/${patientId}/procedures`, data),
+
+    createBatch: (patientId: number, data: any): Promise<AxiosResponse<ApiResponse<any[]>>> =>
+      this.client.post(`/patients/${patientId}/procedures/batch`, data),
 
     assign: (procedureId: number): Promise<AxiosResponse<ApiResponse>> =>
       this.client.post(`/patient-procedures/${procedureId}/assign`),

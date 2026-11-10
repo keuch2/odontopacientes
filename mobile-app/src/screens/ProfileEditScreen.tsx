@@ -29,6 +29,7 @@ export default function ProfileEditScreen() {
   const [facebook, setFacebook] = useState((user as any)?.facebook || '')
   const [instagram, setInstagram] = useState((user as any)?.instagram || '')
   const [tiktok, setTiktok] = useState((user as any)?.tiktok || '')
+  const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -98,8 +99,13 @@ export default function ProfileEditScreen() {
       return
     }
 
-    if (newPassword && newPassword.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres')
+    if (newPassword && !currentPassword) {
+      Alert.alert('Error', 'Ingresa tu contraseña actual')
+      return
+    }
+
+    if (newPassword && newPassword.length < 8) {
+      Alert.alert('Error', 'La contraseña debe tener al menos 8 caracteres')
       return
     }
 
@@ -124,6 +130,7 @@ export default function ProfileEditScreen() {
 
         if (newPassword) {
           await api.users.changePassword({
+            current_password: currentPassword,
             password: newPassword,
             password_confirmation: confirmPassword,
           })
@@ -356,6 +363,15 @@ export default function ProfileEditScreen() {
 
         {renderSection('Cambiar Contraseña', 'lock-closed-outline', (
           <>
+            <TextInput
+              label="Contraseña Actual"
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              mode="outlined"
+              style={styles.input}
+              secureTextEntry={!showPassword}
+              left={<TextInput.Icon icon="lock-outline" />}
+            />
             <TextInput
               label="Nueva Contraseña"
               value={newPassword}

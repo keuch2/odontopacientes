@@ -8,7 +8,7 @@ import { spacing } from '../theme/spacing'
 import { useRegister } from '../contexts/RegisterContext'
 import { api } from '../lib/api'
 
-export default function RegisterStep1Screen({ navigation }: any) {
+export default function RegisterStep1Screen({ navigation, onBackToWelcome }: any) {
   const { registerData, updateRegisterData } = useRegister()
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [showPassword, setShowPassword] = useState(false)
@@ -220,6 +220,10 @@ export default function RegisterStep1Screen({ navigation }: any) {
       <AppHeader showMenu={false} />
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <TouchableOpacity onPress={onBackToWelcome} style={styles.backLink}>
+          <AppText color="brandTurquoise" weight="bold">← Volver</AppText>
+        </TouchableOpacity>
+
         <AppText variant="h2" color="brandNavy" weight="bold" style={styles.title}>
           Registro de Usuario
         </AppText>
@@ -471,8 +475,12 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.lg,
   },
+  backLink: {
+    marginTop: spacing.md,
+    alignSelf: 'flex-start',
+  },
   title: {
-    marginTop: spacing.xl,
+    marginTop: spacing.lg,
     marginBottom: spacing.lg,
   },
   form: {

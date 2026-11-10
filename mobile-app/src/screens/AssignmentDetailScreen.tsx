@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { View, StyleSheet, ScrollView, TouchableOpacity, Linking, Modal, TextInput, Alert, ActivityIndicator, Platform, Image } from 'react-native'
+import { View, StyleSheet, ScrollView, TouchableOpacity, Linking, Modal, KeyboardAvoidingView, Keyboard, TextInput, Alert, ActivityIndicator, Platform, Image } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Ionicons } from '@expo/vector-icons'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import * as ImagePicker from 'expo-image-picker'
+import { COMPATIBLE_IMAGE_OPTIONS } from '../lib/imagePicker'
 import { AppText } from '../components/ui'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
@@ -67,6 +68,49 @@ const STATUS_CONFIG = {
   abandonada: { label: 'Abandonada', color: colors.error, bgColor: '#FFEBEE', icon: 'close-circle' as const },
 }
 
+// iOS no presenta un Modal mientras otro está abierto: si el selector fuera un
+// Modal aparte no aparecería y la pantalla quedaría bloqueada al cerrar el formulario.
+function IOSDateTimeSheet({ mode, value, onChange, onCancel, onConfirm }: {
+  mode: 'date' | 'time'
+  value: Date
+  onChange: (date: Date) => void
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  return (
+    <View style={styles.pickerSheetOverlay}>
+      <View style={styles.pickerSheet}>
+        <View style={styles.pickerSheetHeader}>
+          <TouchableOpacity onPress={onCancel}>
+            <AppText color="error" weight="semibold">Cancelar</AppText>
+          </TouchableOpacity>
+          <AppText weight="bold" color="brandNavy">{mode === 'date' ? 'Seleccionar Fecha' : 'Seleccionar Hora'}</AppText>
+          <TouchableOpacity onPress={onConfirm}>
+            <AppText color="brandTurquoise" weight="semibold">Listo</AppText>
+          </TouchableOpacity>
+        </View>
+        <DateTimePicker
+          value={value}
+          mode={mode}
+          display="spinner"
+          onChange={(_event: any, date?: Date) => { if (date) onChange(date) }}
+          style={{ height: 200 }}
+        />
+      </View>
+    </View>
+  )
+}
+
+function ModalForm({ children }: { children: React.ReactNode }) {
+  return (
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalKeyboardView}>
+      <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
+        <View style={styles.modalContent}>{children}</View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  )
+}
+
 export default function AssignmentDetailScreen({ route, navigation }: any) {
   const { assignmentId, procedureId: routeProcedureId } = route.params || {}
   const queryClient = useQueryClient()
@@ -89,6 +133,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
   const [sessionNotes, setSessionNotes] = useState('')
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showTimePicker, setShowTimePicker] = useState(false)
+  const [pickerDraft, setPickerDraft] = useState(new Date())
   const [savingSession, setSavingSession] = useState(false)
 
   // Procedure states (from ProcedureViewScreen)
@@ -399,6 +444,31 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
     }
   }
 
+  const openPicker = (mode: 'date' | 'time') => {
+    Keyboard.dismiss()
+    setPickerDraft(sessionDate)
+    if (mode === 'date') setShowDatePicker(true)
+    else setShowTimePicker(true)
+  }
+
+  const closePicker = () => {
+    setShowDatePicker(false)
+    setShowTimePicker(false)
+  }
+
+  const iosPickerSheet = Platform.OS === 'ios' && (showDatePicker || showTimePicker) ? (
+    <IOSDateTimeSheet
+      mode={showDatePicker ? 'date' : 'time'}
+      value={pickerDraft}
+      onChange={setPickerDraft}
+      onCancel={closePicker}
+      onConfirm={() => {
+        setSessionDate(pickerDraft)
+        closePicker()
+      }}
+    />
+  ) : null
+
   const onDateChange = (_event: any, selectedDate?: Date) => {
     setShowDatePicker(false)
     if (selectedDate) {
@@ -450,6 +520,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: isCamera,
       allowsMultipleSelection: !isCamera,
+      ...COMPATIBLE_IMAGE_OPTIONS,
       quality: 0.8,
       base64: true,
     })
@@ -458,6 +529,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
       if (validAssets.length === 0) return
       setUploadingPhoto(true)
       let uploaded = 0, failed = 0
+      let failureReason = ''
       try {
         for (const asset of validAssets) {
           try {
@@ -468,9 +540,12 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
               await api.procedurePhotos.uploadBase64ByProcedure(procedureId, { image: base64Image })
             }
             uploaded++
-          } catch { failed++ }
+          } catch (error: any) {
+            failed++
+            failureReason = error.response?.data?.message || failureReason
+          }
         }
-        if (failed > 0) Alert.alert('Resultado', `${uploaded} foto(s) subida(s), ${failed} fallida(s)`)
+        if (failed > 0) Alert.alert('Resultado', `${uploaded} foto(s) subida(s), ${failed} fallida(s)${failureReason ? `. ${failureReason}` : ''}`)
         else Alert.alert('Éxito', uploaded === 1 ? 'Foto subida correctamente' : `${uploaded} fotos subidas correctamente`)
         fetchPhotos()
       } catch (error: any) {
@@ -1058,115 +1133,109 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
 
       {/* Complete Modal */}
       <Modal visible={completeModalVisible} transparent animationType="fade" onRequestClose={() => setCompleteModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <AppText style={styles.modalTitle}>Completar Tratamiento</AppText>
-            <AppText style={styles.modalDescription}>¿Estás seguro de que deseas marcar este tratamiento como completado?</AppText>
-            <View style={styles.inputContainer}>
-              <AppText style={styles.inputLabel}>Notas Finales (Opcional)</AppText>
-              <TextInput style={styles.textArea} value={finalNotes} onChangeText={setFinalNotes} placeholder="Agrega observaciones finales..." multiline numberOfLines={4} textAlignVertical="top" />
-            </View>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={[styles.modalButton, styles.modalCancelButton]} onPress={() => { setCompleteModalVisible(false); setFinalNotes('') }} disabled={completeMutation.isPending}>
-                <AppText style={styles.modalCancelText}>Cancelar</AppText>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.modalConfirmButton]} onPress={confirmComplete} disabled={completeMutation.isPending}>
-                {completeMutation.isPending ? <ActivityIndicator color="#fff" /> : <AppText style={styles.modalConfirmText}>Confirmar</AppText>}
-              </TouchableOpacity>
-            </View>
+        <ModalForm>
+          <AppText style={styles.modalTitle}>Completar Tratamiento</AppText>
+          <AppText style={styles.modalDescription}>¿Estás seguro de que deseas marcar este tratamiento como completado?</AppText>
+          <View style={styles.inputContainer}>
+            <AppText style={styles.inputLabel}>Notas Finales (Opcional)</AppText>
+            <TextInput style={styles.textArea} value={finalNotes} onChangeText={setFinalNotes} placeholder="Agrega observaciones finales..." multiline numberOfLines={4} textAlignVertical="top" />
           </View>
-        </View>
+          <View style={styles.modalButtons}>
+            <TouchableOpacity style={[styles.modalButton, styles.modalCancelButton]} onPress={() => { setCompleteModalVisible(false); setFinalNotes('') }} disabled={completeMutation.isPending}>
+              <AppText style={styles.modalCancelText}>Cancelar</AppText>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.modalButton, styles.modalConfirmButton]} onPress={confirmComplete} disabled={completeMutation.isPending}>
+              {completeMutation.isPending ? <ActivityIndicator color="#fff" /> : <AppText style={styles.modalConfirmText}>Confirmar</AppText>}
+            </TouchableOpacity>
+          </View>
+        </ModalForm>
       </Modal>
 
       {/* Abandon Modal */}
       <Modal visible={abandonModalVisible} transparent animationType="fade" onRequestClose={() => setAbandonModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <AppText style={styles.modalTitle}>Abandonar Caso</AppText>
-            <AppText style={styles.modalDescription}>¿Estás seguro de que deseas abandonar este caso?</AppText>
-            <View style={styles.inputContainer}>
-              <AppText style={styles.inputLabel}>Motivo *</AppText>
-              <TextInput style={styles.textArea} value={abandonReason} onChangeText={setAbandonReason} placeholder="Explica el motivo del abandono..." multiline numberOfLines={4} textAlignVertical="top" />
-            </View>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={[styles.modalButton, styles.modalCancelButton]} onPress={() => { setAbandonModalVisible(false); setAbandonReason('') }} disabled={abandonMutation.isPending}>
-                <AppText style={styles.modalCancelText}>Cancelar</AppText>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.modalDangerButton]} onPress={confirmAbandon} disabled={abandonMutation.isPending}>
-                {abandonMutation.isPending ? <ActivityIndicator color="#fff" /> : <AppText style={styles.modalConfirmText}>Abandonar</AppText>}
-              </TouchableOpacity>
-            </View>
+        <ModalForm>
+          <AppText style={styles.modalTitle}>Abandonar Caso</AppText>
+          <AppText style={styles.modalDescription}>¿Estás seguro de que deseas abandonar este caso?</AppText>
+          <View style={styles.inputContainer}>
+            <AppText style={styles.inputLabel}>Motivo *</AppText>
+            <TextInput style={styles.textArea} value={abandonReason} onChangeText={setAbandonReason} placeholder="Explica el motivo del abandono..." multiline numberOfLines={4} textAlignVertical="top" />
           </View>
-        </View>
+          <View style={styles.modalButtons}>
+            <TouchableOpacity style={[styles.modalButton, styles.modalCancelButton]} onPress={() => { setAbandonModalVisible(false); setAbandonReason('') }} disabled={abandonMutation.isPending}>
+              <AppText style={styles.modalCancelText}>Cancelar</AppText>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.modalButton, styles.modalDangerButton]} onPress={confirmAbandon} disabled={abandonMutation.isPending}>
+              {abandonMutation.isPending ? <ActivityIndicator color="#fff" /> : <AppText style={styles.modalConfirmText}>Abandonar</AppText>}
+            </TouchableOpacity>
+          </View>
+        </ModalForm>
       </Modal>
 
       {/* Add Session Modal */}
       <Modal visible={addSessionModalVisible} transparent animationType="fade" onRequestClose={() => setAddSessionModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <AppText style={styles.modalTitle}>Registrar Sesión</AppText>
-            <AppText style={styles.modalDescription}>Registra una nueva sesión de tratamiento</AppText>
-            <View style={styles.inputContainer}>
-              <AppText style={styles.inputLabel}>Fecha y Hora</AppText>
-              <View style={styles.dateTimeRow}>
-                <TouchableOpacity style={styles.dateTimeButton} onPress={() => setShowDatePicker(true)}>
-                  <Ionicons name="calendar" size={18} color={colors.brandTurquoise} />
-                  <AppText style={styles.dateTimeButtonText}>{sessionDate.toLocaleDateString('es-ES')}</AppText>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.dateTimeButton} onPress={() => setShowTimePicker(true)}>
-                  <Ionicons name="time" size={18} color={colors.brandTurquoise} />
-                  <AppText style={styles.dateTimeButtonText}>{sessionDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</AppText>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View style={styles.inputContainer}>
-              <AppText style={styles.inputLabel}>Notas (Opcional)</AppText>
-              <TextInput style={styles.textArea} value={sessionNotes} onChangeText={setSessionNotes} placeholder="Observaciones de la sesión..." multiline numberOfLines={3} textAlignVertical="top" />
-            </View>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={[styles.modalButton, styles.modalCancelButton]} onPress={() => setAddSessionModalVisible(false)} disabled={savingSession}>
-                <AppText style={styles.modalCancelText}>Cancelar</AppText>
+        <ModalForm>
+          <AppText style={styles.modalTitle}>Registrar Sesión</AppText>
+          <AppText style={styles.modalDescription}>Registra una nueva sesión de tratamiento</AppText>
+          <View style={styles.inputContainer}>
+            <AppText style={styles.inputLabel}>Fecha y Hora</AppText>
+            <View style={styles.dateTimeRow}>
+              <TouchableOpacity style={styles.dateTimeButton} onPress={() => openPicker('date')}>
+                <Ionicons name="calendar" size={18} color={colors.brandTurquoise} />
+                <AppText style={styles.dateTimeButtonText}>{sessionDate.toLocaleDateString('es-ES')}</AppText>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.modalConfirmButton]} onPress={saveNewSession} disabled={savingSession}>
-                {savingSession ? <ActivityIndicator color="#fff" /> : <AppText style={styles.modalConfirmText}>Guardar</AppText>}
+              <TouchableOpacity style={styles.dateTimeButton} onPress={() => openPicker('time')}>
+                <Ionicons name="time" size={18} color={colors.brandTurquoise} />
+                <AppText style={styles.dateTimeButtonText}>{sessionDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</AppText>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+          <View style={styles.inputContainer}>
+            <AppText style={styles.inputLabel}>Notas (Opcional)</AppText>
+            <TextInput style={styles.textArea} value={sessionNotes} onChangeText={setSessionNotes} placeholder="Observaciones de la sesión..." multiline numberOfLines={3} textAlignVertical="top" />
+          </View>
+          <View style={styles.modalButtons}>
+            <TouchableOpacity style={[styles.modalButton, styles.modalCancelButton]} onPress={() => setAddSessionModalVisible(false)} disabled={savingSession}>
+              <AppText style={styles.modalCancelText}>Cancelar</AppText>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.modalButton, styles.modalConfirmButton]} onPress={saveNewSession} disabled={savingSession}>
+              {savingSession ? <ActivityIndicator color="#fff" /> : <AppText style={styles.modalConfirmText}>Guardar</AppText>}
+            </TouchableOpacity>
+          </View>
+        </ModalForm>
+        {iosPickerSheet}
       </Modal>
 
       {/* Edit Session Modal */}
       <Modal visible={editSessionModalVisible} transparent animationType="fade" onRequestClose={() => setEditSessionModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <AppText style={styles.modalTitle}>Editar Sesión #{selectedSession?.session_number}</AppText>
-            <View style={styles.inputContainer}>
-              <AppText style={styles.inputLabel}>Fecha y Hora</AppText>
-              <View style={styles.dateTimeRow}>
-                <TouchableOpacity style={styles.dateTimeButton} onPress={() => setShowDatePicker(true)}>
-                  <Ionicons name="calendar" size={18} color={colors.brandTurquoise} />
-                  <AppText style={styles.dateTimeButtonText}>{sessionDate.toLocaleDateString('es-ES')}</AppText>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.dateTimeButton} onPress={() => setShowTimePicker(true)}>
-                  <Ionicons name="time" size={18} color={colors.brandTurquoise} />
-                  <AppText style={styles.dateTimeButtonText}>{sessionDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</AppText>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View style={styles.inputContainer}>
-              <AppText style={styles.inputLabel}>Notas (Opcional)</AppText>
-              <TextInput style={styles.textArea} value={sessionNotes} onChangeText={setSessionNotes} placeholder="Observaciones de la sesión..." multiline numberOfLines={3} textAlignVertical="top" />
-            </View>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={[styles.modalButton, styles.modalCancelButton]} onPress={() => setEditSessionModalVisible(false)} disabled={savingSession}>
-                <AppText style={styles.modalCancelText}>Cancelar</AppText>
+        <ModalForm>
+          <AppText style={styles.modalTitle}>Editar Sesión #{selectedSession?.session_number}</AppText>
+          <View style={styles.inputContainer}>
+            <AppText style={styles.inputLabel}>Fecha y Hora</AppText>
+            <View style={styles.dateTimeRow}>
+              <TouchableOpacity style={styles.dateTimeButton} onPress={() => openPicker('date')}>
+                <Ionicons name="calendar" size={18} color={colors.brandTurquoise} />
+                <AppText style={styles.dateTimeButtonText}>{sessionDate.toLocaleDateString('es-ES')}</AppText>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.modalConfirmButton]} onPress={updateSession} disabled={savingSession}>
-                {savingSession ? <ActivityIndicator color="#fff" /> : <AppText style={styles.modalConfirmText}>Actualizar</AppText>}
+              <TouchableOpacity style={styles.dateTimeButton} onPress={() => openPicker('time')}>
+                <Ionicons name="time" size={18} color={colors.brandTurquoise} />
+                <AppText style={styles.dateTimeButtonText}>{sessionDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</AppText>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+          <View style={styles.inputContainer}>
+            <AppText style={styles.inputLabel}>Notas (Opcional)</AppText>
+            <TextInput style={styles.textArea} value={sessionNotes} onChangeText={setSessionNotes} placeholder="Observaciones de la sesión..." multiline numberOfLines={3} textAlignVertical="top" />
+          </View>
+          <View style={styles.modalButtons}>
+            <TouchableOpacity style={[styles.modalButton, styles.modalCancelButton]} onPress={() => setEditSessionModalVisible(false)} disabled={savingSession}>
+              <AppText style={styles.modalCancelText}>Cancelar</AppText>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.modalButton, styles.modalConfirmButton]} onPress={updateSession} disabled={savingSession}>
+              {savingSession ? <ActivityIndicator color="#fff" /> : <AppText style={styles.modalConfirmText}>Actualizar</AppText>}
+            </TouchableOpacity>
+          </View>
+        </ModalForm>
+        {iosPickerSheet}
       </Modal>
 
       {/* Edit Procedure Modal */}
@@ -1268,43 +1337,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
         </View>
       </Modal>
 
-      {/* DateTimePicker in its own Modal to avoid iOS rendering issues inside other modals */}
-      {Platform.OS === 'ios' ? (
-        <Modal visible={showDatePicker || showTimePicker} transparent animationType="slide">
-          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }}>
-            <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 30 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                <TouchableOpacity onPress={() => { setShowDatePicker(false); setShowTimePicker(false) }}>
-                  <AppText color="error" weight="semibold">Cancelar</AppText>
-                </TouchableOpacity>
-                <AppText weight="bold" color="brandNavy">{showDatePicker ? 'Seleccionar Fecha' : 'Seleccionar Hora'}</AppText>
-                <TouchableOpacity onPress={() => { setShowDatePicker(false); setShowTimePicker(false) }}>
-                  <AppText color="brandTurquoise" weight="semibold">Listo</AppText>
-                </TouchableOpacity>
-              </View>
-              <DateTimePicker
-                value={sessionDate}
-                mode={showDatePicker ? 'date' : 'time'}
-                display="spinner"
-                onChange={(event: any, date?: Date) => {
-                  if (date) {
-                    if (showDatePicker) {
-                      const newDate = new Date(sessionDate)
-                      newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate())
-                      setSessionDate(newDate)
-                    } else {
-                      const newDate = new Date(sessionDate)
-                      newDate.setHours(date.getHours(), date.getMinutes())
-                      setSessionDate(newDate)
-                    }
-                  }
-                }}
-                style={{ height: 200 }}
-              />
-            </View>
-          </View>
-        </Modal>
-      ) : (
+      {Platform.OS !== 'ios' && (
         <>
           {showDatePicker && (
             <DateTimePicker value={sessionDate} mode="date" display="default" onChange={onDateChange} />
@@ -1366,7 +1399,11 @@ const styles = StyleSheet.create({
   photoActionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.brandNavy, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: 8 },
   descriptionInput: { backgroundColor: 'rgba(255, 255, 255, 0.1)', color: colors.white, borderRadius: 8, padding: spacing.md, minHeight: 80, textAlignVertical: 'top', marginBottom: spacing.sm },
   // Modals
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
+  modalKeyboardView: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+  modalScrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
+  pickerSheetOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.4)' },
+  pickerSheet: { backgroundColor: colors.white, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 32 },
+  pickerSheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.background },
   modalContent: { backgroundColor: colors.white, borderRadius: 16, padding: spacing.lg, width: '100%', maxWidth: 400, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.brandNavy, marginBottom: spacing.sm, textAlign: 'center' },
   modalDescription: { fontSize: 14, color: colors.textSecondary, marginBottom: spacing.lg, textAlign: 'center', lineHeight: 20 },

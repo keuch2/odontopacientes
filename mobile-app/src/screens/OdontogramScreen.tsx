@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
+import { COMPATIBLE_IMAGE_OPTIONS } from '../lib/imagePicker'
 import { api } from '../lib/api'
 import { useAuthStore, useIsPremium } from '../store/auth'
 import AddProcedureModal from '../components/AddProcedureModal'
@@ -191,6 +192,7 @@ export default function OdontogramScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: isCamera,
       allowsMultipleSelection: !isCamera,
+      ...COMPATIBLE_IMAGE_OPTIONS,
       quality: 0.8,
       base64: true,
     })

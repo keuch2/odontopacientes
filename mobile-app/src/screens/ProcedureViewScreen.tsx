@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicato
 import { useRoute, useNavigation } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
+import { COMPATIBLE_IMAGE_OPTIONS } from '../lib/imagePicker'
 import { AppText, AppButton } from '../components/ui'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
@@ -144,6 +145,7 @@ export default function ProcedureViewScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: isCamera,
       allowsMultipleSelection: !isCamera,
+      ...COMPATIBLE_IMAGE_OPTIONS,
       quality: 0.8,
       base64: true,
     })

@@ -169,6 +169,10 @@ class ProcedurePhotoController extends Controller
             if ($imageData === false) {
                 return response()->json(['message' => 'Imagen inválida'], 400);
             }
+
+            if (! \App\Support\Base64Image::isSupported($imageData)) {
+                return response()->json(['message' => \App\Support\Base64Image::UNSUPPORTED_MESSAGE], 422);
+            }
             
             // Procesar y redimensionar imagen
             $processedImage = $this->processImageFromString($imageData);
@@ -448,6 +452,10 @@ class ProcedurePhotoController extends Controller
 
             if ($imageData === false) {
                 return response()->json(['message' => 'Imagen inválida'], 400);
+            }
+
+            if (! \App\Support\Base64Image::isSupported($imageData)) {
+                return response()->json(['message' => \App\Support\Base64Image::UNSUPPORTED_MESSAGE], 422);
             }
 
             $processedImage = $this->processImageFromString($imageData);

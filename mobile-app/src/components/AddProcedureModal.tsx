@@ -12,6 +12,7 @@ import {
 } from 'react-native-paper';
 import { Text, View, ScrollView, StyleSheet, Alert, TouchableOpacity, FlatList, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { COMPATIBLE_IMAGE_OPTIONS } from '../lib/imagePicker';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../lib/api';
 
@@ -300,6 +301,7 @@ export default function AddProcedureModal({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: isCamera,
       allowsMultipleSelection: !isCamera,
+      ...COMPATIBLE_IMAGE_OPTIONS,
       quality: 0.8,
       base64: true,
     });

@@ -5,11 +5,21 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Assignment;
 use App\Models\TreatmentSession;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class TreatmentSessionController extends Controller
 {
+    /**
+     * La app envía la fecha en UTC, y Eloquent guarda la hora tal como llega,
+     * sin convertirla. Hay que pasarla a la zona de la app antes de guardar.
+     */
+    private function toAppTimezone(string $date): Carbon
+    {
+        return Carbon::parse($date)->setTimezone(config('app.timezone'));
+    }
+
     public function index(int $assignmentId): JsonResponse
     {
         $assignment = Assignment::findOrFail($assignmentId);
@@ -44,7 +54,7 @@ class TreatmentSessionController extends Controller
         $session = TreatmentSession::create([
             'assignment_id' => $assignmentId,
             'session_number' => $nextSessionNumber,
-            'session_date' => $validated['session_date'],
+            'session_date' => $this->toAppTimezone($validated['session_date']),
             'notes' => $validated['notes'] ?? null,
             'status' => $validated['status'] ?? 'completada',
             'created_by' => $userId,
@@ -70,6 +80,10 @@ class TreatmentSessionController extends Controller
             'notes' => 'nullable|string|max:1000',
             'status' => 'sometimes|in:programada,completada,cancelada',
         ]);
+
+        if (isset($validated['session_date'])) {
+            $validated['session_date'] = $this->toAppTimezone($validated['session_date']);
+        }
 
         $oldStatus = $session->status;
         $session->update($validated);

@@ -222,7 +222,7 @@ pnpm 9+ with workspaces. The workspaces are `web-admin` and `web-public`. The mo
 ## Known Issues & Fixes Applied (as of March 2026)
 
 ### Backend — `PatientController@index` (`backend/app/Http/Controllers/Api/PatientController.php`)
-- **`tooth_fdi` search:** Filters via `whereHas('patientProcedures', fn => where('tooth_fdi', $fdi))` — uses the actual DB column, not the accessor `tooth_description`.
+- **`tooth_fdi` search:** Uses `FIND_IN_SET` on the DB column, because it can hold a comma-separated list (prostheses). All clinical filters apply inside a single `whereHas`, so they must match the same procedure.
 - **`q` search:** Searches patient name AND treatment names (`whereHas('patientProcedures.treatment', fn => where('name', LIKE, ...))`).
 - **`chair_id` filter:** Checks both `patient_procedures.chair_id` AND `treatment.chair_id` (some procedures have `null` chair_id and store it on the treatment).
 - **`treatments` in response:** Each patient record includes a `treatments` array with unique treatment names from all their procedures. Required for frontend filtering in `ChairPatientsScreen`.

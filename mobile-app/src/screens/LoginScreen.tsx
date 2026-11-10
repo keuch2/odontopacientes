@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { View, StyleSheet, KeyboardAvoidingView, Platform, Image, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native'
+import { View, StyleSheet, KeyboardAvoidingView, Platform, Image, TouchableOpacity, ScrollView, TextInput } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuthStore } from '../store/auth'
 import { AppText } from '../components/ui'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
+import { ForgotPasswordModal } from '../components/ForgotPasswordModal'
 
 interface LoginRouteParams {
   registered?: boolean
@@ -22,6 +23,7 @@ export default function LoginScreen({ onBackToWelcome, route }: LoginScreenProps
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [forgotVisible, setForgotVisible] = useState(false)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
@@ -62,12 +64,6 @@ export default function LoginScreen({ onBackToWelcome, route }: LoginScreenProps
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleForgotPassword = () => {
-    // TODO: Implementar recuperación de contraseña
-    console.log('Recuperar contraseña');
-    Alert.alert('Recuperación de Contraseña', 'Actualmente, la recuperación de contraseña no está disponible. Como solución temporal, intenta registrar un nuevo usuario con el mismo correo electrónico para actualizar la contraseña.');
   }
 
   return (
@@ -144,7 +140,7 @@ export default function LoginScreen({ onBackToWelcome, route }: LoginScreenProps
             </TouchableOpacity>
 
             {/* Forgot Password Link */}
-            <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotPassword}>
+            <TouchableOpacity onPress={() => setForgotVisible(true)} style={styles.forgotPassword}>
               <AppText variant="body" color="brandNavy" style={styles.forgotPasswordText}>
                 Olvidé mi contraseña
               </AppText>
@@ -169,6 +165,12 @@ export default function LoginScreen({ onBackToWelcome, route }: LoginScreenProps
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <ForgotPasswordModal
+        visible={forgotVisible}
+        initialEmail={email}
+        onClose={() => setForgotVisible(false)}
+      />
     </SafeAreaView>
   )
 }

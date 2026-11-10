@@ -11,6 +11,10 @@ return [
     | y el flujo de suscripción se puede probar end-to-end sin el gateway real.
     |
     */
+    'public_site' => [
+        'url' => env('PUBLIC_SITE_URL', 'https://codexpy.com/odontopacientes/app'),
+    ],
+
     'bancard' => [
         'public_key' => env('BANCARD_PUBLIC_KEY'),
         'private_key' => env('BANCARD_PRIVATE_KEY'),

@@ -21,6 +21,11 @@ Route::prefix('auth')->group(function () {
     
     Route::post('/login', [\App\Http\Controllers\Api\AuthController::class, 'login']);
 
+    Route::middleware('throttle:10,1')->group(function () {
+        Route::post('/forgot-password', [\App\Http\Controllers\Api\AuthController::class, 'forgotPassword']);
+        Route::post('/reset-password', [\App\Http\Controllers\Api\AuthController::class, 'resetPassword']);
+    });
+
     Route::post('/logout', function (Request $request) {
         \Laravel\Sanctum\PersonalAccessToken::findToken((string) $request->bearerToken())?->delete();
 

@@ -165,6 +165,9 @@ class ApiClient {
     login: (credentials: LoginCredentials): Promise<AxiosResponse<AuthLoginResponse>> =>
       this.client.post('/auth/login', credentials),
 
+    forgotPassword: (email: string): Promise<AxiosResponse<ApiResponse>> =>
+      this.client.post('/auth/forgot-password', { email }),
+
     checkEmail: (email: string): Promise<AxiosResponse<AuthCheckEmailResponse>> =>
       this.client.post('/auth/check-email', { email }, { timeout: 2000 }),
 

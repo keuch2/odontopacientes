@@ -92,6 +92,10 @@ export const api = {
     login: (email: string, password: string) =>
       apiClient.post<ApiResponse>('/auth/login', { email, password }),
     logout: () => apiClient.post<ApiResponse>('/auth/logout'),
+    forgotPassword: (email: string) =>
+      apiClient.post<ApiResponse>('/auth/forgot-password', { email }),
+    resetPassword: (data: { email: string; token: string; password: string; password_confirmation: string }) =>
+      apiClient.post<ApiResponse>('/auth/reset-password', data),
     me: () => apiClient.get<ApiResponse>('/auth/me'),
     register: (payload: RegisterPayload) =>
       apiClient.post<ApiResponse>('/auth/register', payload),

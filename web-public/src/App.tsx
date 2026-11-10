@@ -3,6 +3,8 @@ import { Routes, Route } from 'react-router-dom'
 import { useAuthStore } from '@/store/auth'
 import Layout from '@/components/Layout'
 import ProtectedRoute from '@/components/ProtectedRoute'
+import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
+import ResetPasswordPage from '@/pages/ResetPasswordPage'
 import HomePage from '@/pages/HomePage'
 import LoginPage from '@/pages/LoginPage'
 import RegisterPage from '@/pages/RegisterPage'
@@ -22,6 +24,8 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/registro" element={<RegisterPage />} />
+        <Route path="/recuperar-contrasena" element={<ForgotPasswordPage />} />
+        <Route path="/restablecer-contrasena" element={<ResetPasswordPage />} />
         <Route
           path="/perfil"
           element={

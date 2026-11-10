@@ -58,6 +58,11 @@ export default function LoginPage() {
         <button type="submit" className="btn-primary w-full" disabled={loading}>
           {loading ? 'Ingresando…' : 'Ingresar'}
         </button>
+        <p className="text-center text-sm">
+          <Link to="/recuperar-contrasena" className="font-semibold text-brand-turquoise hover:underline">
+            Olvidé mi contraseña
+          </Link>
+        </p>
         <p className="text-center text-sm text-slate-600">
           ¿No tenés cuenta?{' '}
           <Link to="/registro" className="font-semibold text-brand-turquoise hover:underline">

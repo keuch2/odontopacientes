@@ -142,6 +142,63 @@ class AuthController extends Controller
     }
 
     /**
+     * Enviar el enlace de recuperación. La respuesta no revela si el email existe.
+     */
+    public function forgotPassword(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        try {
+            \Illuminate\Support\Facades\Password::sendResetLink([
+                'email' => strtolower(trim($validated['email'])),
+                'active' => true,
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+
+        return response()->json([
+            'message' => 'Si el email está registrado, recibirás un enlace para restablecer tu contraseña.',
+        ]);
+    }
+
+    /**
+     * Definir una contraseña nueva con el enlace recibido por email.
+     */
+    public function resetPassword(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'token' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $status = \Illuminate\Support\Facades\Password::reset(
+            [
+                'email' => strtolower(trim($validated['email'])),
+                'token' => $validated['token'],
+                'password' => $validated['password'],
+            ],
+            function (User $user, string $password) {
+                $user->forceFill(['password' => Hash::make($password)])->save();
+                $user->tokens()->delete();
+            }
+        );
+
+        if ($status !== \Illuminate\Support\Facades\Password::PASSWORD_RESET) {
+            return response()->json([
+                'message' => 'El enlace no es válido o ya venció. Solicita uno nuevo.',
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Contraseña actualizada. Ya puedes iniciar sesión.',
+        ]);
+    }
+
+    /**
      * Cerrar sesión
      */
     public function logout(Request $request)
@@ -379,56 +436,6 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Contraseña actualizada exitosamente'
-        ]);
-    }
-
-    /**
-     * Solicitar restablecimiento de contraseña
-     */
-    public function forgotPassword(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email|exists:users,email',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Datos de entrada inválidos',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        // Aquí implementarías el envío del email de restablecimiento
-        // Por ahora, solo retornamos un mensaje de éxito
-
-        return response()->json([
-            'message' => 'Se ha enviado un enlace de restablecimiento a tu correo electrónico'
-        ]);
-    }
-
-    /**
-     * Restablecer contraseña
-     */
-    public function resetPassword(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'token' => 'required|string',
-            'email' => 'required|email|exists:users,email',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Datos de entrada inválidos',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        // Aquí implementarías la lógica de validación del token
-        // y el restablecimiento de la contraseña
-
-        return response()->json([
-            'message' => 'Contraseña restablecida exitosamente'
         ]);
     }
 }

@@ -99,6 +99,8 @@ Sanctum Bearer tokens (stateless). Login returns `{user, access_token}`, stored 
 
 **The `demo_user` array:** Protected routes use the `demo.auth` middleware (`DemoAuthMiddleware`), not `auth:sanctum`. It validates the Sanctum token and stores the user as a plain array in `$request->attributes->get('demo_user')`, which is what controllers read (`$request->user()` is generally not populated). The array is built only in `DemoUserFactory::buildFromModel()`, so add new user fields there.
 
+**Password recovery:** `POST /auth/forgot-password` emails a link to `web-public` (`/restablecer-contrasena`, base URL in `services.public_site.url` / `PUBLIC_SITE_URL`), which calls `POST /auth/reset-password`. The mobile app only requests the link. Production needs the `MAIL_*` variables; a failed send is only logged, because the response must not reveal whether the email exists.
+
 ### Plans (Básico / Premium)
 Básico is read-only and hides patient contact details. Premium has full access, and admins always pass.
 - **Enforcement** lives in one place: the `plan.premium` middleware (`EnsurePremiumPlan`) on the write-route sub-group in `routes/api.php`. New write endpoints go inside that group. `apiResource('patients')` is deliberately split into read and write declarations, so never redeclare it in full.

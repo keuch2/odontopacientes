@@ -174,4 +174,9 @@ class User extends Authenticatable
     {
         return $this->isAdmin() || $this->isPremium();
     }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new \App\Notifications\ResetPasswordNotification($token));
+    }
 }

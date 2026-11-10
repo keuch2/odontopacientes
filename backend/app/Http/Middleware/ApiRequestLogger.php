@@ -28,13 +28,9 @@ class ApiRequestLogger
             'user_id' => optional($request->user())->id,
         ];
 
-        $payload = [];
+        // Solo los nombres de los campos: los valores incluyen datos clínicos y fotos.
         if ($request->isMethod('post') || $request->isMethod('put') || $request->isMethod('patch')) {
-            $payload = $this->sanitizePayload($request->all());
-        }
-
-        if (!empty($payload)) {
-            $context['payload'] = $payload;
+            $context['payload_fields'] = array_keys($request->all());
         }
 
         Log::info('API request received', $context);
@@ -71,32 +67,5 @@ class ApiRequestLogger
         }
 
         return $response;
-    }
-
-    /**
-     * Remove sensitive fields from the request payload before logging.
-     */
-    private function sanitizePayload(array $payload): array
-    {
-        $sensitiveKeys = [
-            'password',
-            'password_confirmation',
-            'current_password',
-            'token',
-        ];
-
-        return collect($payload)
-            ->map(function ($value, $key) use ($sensitiveKeys) {
-                if (in_array($key, $sensitiveKeys, true)) {
-                    return '*** redacted ***';
-                }
-
-                if (is_array($value)) {
-                    return $this->sanitizePayload($value);
-                }
-
-                return $value;
-            })
-            ->toArray();
     }
 }

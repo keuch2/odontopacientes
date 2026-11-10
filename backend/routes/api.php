@@ -327,21 +327,137 @@ Route::middleware('demo.auth')->group(function () {
         Route::post('/my-assignments/{id}/abandon', [\App\Http\Controllers\Api\AssignmentsController::class, 'abandon']);
     });
 
-    // Endpoint de usuarios - devuelve usuarios de la base de datos
-    Route::get('/users', function () {
-        $users = \App\Models\User::with('university')
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($user) {
-                return [
+    // Gestión de usuarios: admin sin restricciones; el coordinador solo gestiona
+    // alumnos (pantalla Alumnos del web-admin) y nunca puede cambiar roles.
+    Route::middleware('role:admin,coordinador')->group(function () {
+        $isCoordinator = fn (Illuminate\Http\Request $request): bool =>
+            $request->attributes->get('demo_user')['role'] === 'coordinador';
+        $forbidsTarget = fn (Illuminate\Http\Request $request, \App\Models\User $target): bool =>
+            $isCoordinator($request) && $target->role !== 'alumno';
+
+        // Endpoint de usuarios - devuelve usuarios de la base de datos
+        Route::get('/users', function (Illuminate\Http\Request $request) use ($isCoordinator) {
+            $users = \App\Models\User::with('university')
+                ->when($isCoordinator($request), fn ($query) => $query->where('role', 'alumno'))
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'role' => $user->role,
+                        'active' => (bool) $user->active,
+                        'plan' => $user->plan,
+                        'plan_expires_at' => $user->plan_expires_at,
+                        'is_premium' => $user->isPremium(),
+                        'phone' => $user->phone,
+                        'birth_date' => $user->birth_date,
+                        'profile_image' => $user->profile_image,
+                        'university_id' => $user->university_id,
+                        'university' => $user->university ? [
+                            'id' => $user->university->id,
+                            'name' => $user->university->name,
+                        ] : null,
+                        'created_at' => $user->created_at,
+                        'updated_at' => $user->updated_at,
+                    ];
+                });
+
+            return response()->json([
+                'data' => $users
+            ]);
+        });
+
+        // Endpoint para activar/desactivar usuario
+        Route::put('/users/{id}/toggle-active', function (Illuminate\Http\Request $request, $id) use ($forbidsTarget) {
+            $user = \App\Models\User::findOrFail($id);
+            if ($forbidsTarget($request, $user)) {
+                return response()->json(['message' => 'No autorizado'], 403);
+            }
+
+            $user->active = !$user->active;
+            $user->save();
+
+            return response()->json([
+                'message' => 'Usuario actualizado correctamente',
+                'data' => [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
                     'role' => $user->role,
                     'active' => (bool) $user->active,
+                    'phone' => $user->phone,
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at,
+                ]
+            ]);
+        });
+
+        // Endpoint para que un ADMIN active/desactive el plan Premium de un usuario
+        // manualmente (sin pago). El usuario normal no puede auto-asignarse Premium.
+        Route::put('/users/{id}/plan', function (Illuminate\Http\Request $request, $id) {
+            $actor = $request->attributes->get('demo_user');
+            if (($actor['role'] ?? null) !== 'admin') {
+                return response()->json(['message' => 'No autorizado'], 403);
+            }
+
+            $validated = $request->validate([
+                'plan' => 'required|in:basico,premium',
+                'plan_expires_at' => 'nullable|date|after:now',
+            ]);
+
+            $user = \App\Models\User::findOrFail($id);
+            $user->plan = $validated['plan'];
+            // Premium: fecha opcional (null = sin expiración). Básico: limpiar fecha.
+            $user->plan_expires_at = $validated['plan'] === 'premium'
+                ? ($validated['plan_expires_at'] ?? null)
+                : null;
+            $user->save();
+
+            return response()->json([
+                'message' => 'Plan actualizado correctamente',
+                'data' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
                     'plan' => $user->plan,
                     'plan_expires_at' => $user->plan_expires_at,
                     'is_premium' => $user->isPremium(),
+                ],
+            ]);
+        });
+
+        // Endpoint para crear nuevo usuario
+        Route::post('/users', function (Illuminate\Http\Request $request) use ($isCoordinator) {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|email|unique:users,email',
+                'password' => 'required|string|min:6',
+                'phone' => 'nullable|string|max:20',
+                'role' => 'required|in:admin,alumno',
+                'birth_date' => 'nullable|date',
+                'university_id' => 'nullable|exists:universities,id',
+            ]);
+
+            if ($isCoordinator($request) && $validated['role'] !== 'alumno') {
+                return response()->json(['message' => 'No autorizado'], 403);
+            }
+
+            $validated['password'] = \Illuminate\Support\Facades\Hash::make($validated['password']);
+            $validated['active'] = true;
+
+            $user = \App\Models\User::create($validated);
+            $user->load('university');
+
+            return response()->json([
+                'message' => 'Usuario creado correctamente',
+                'data' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'active' => (bool) $user->active,
                     'phone' => $user->phone,
                     'birth_date' => $user->birth_date,
                     'profile_image' => $user->profile_image,
@@ -352,149 +468,58 @@ Route::middleware('demo.auth')->group(function () {
                     ] : null,
                     'created_at' => $user->created_at,
                     'updated_at' => $user->updated_at,
-                ];
-            });
+                ]
+            ], 201);
+        });
 
-        return response()->json([
-            'data' => $users
-        ]);
-    });
-    
-    // Endpoint para activar/desactivar usuario
-    Route::put('/users/{id}/toggle-active', function ($id) {
-        $user = \App\Models\User::findOrFail($id);
-        $user->active = !$user->active;
-        $user->save();
-        
-        return response()->json([
-            'message' => 'Usuario actualizado correctamente',
-            'data' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role,
-                'active' => (bool) $user->active,
-                'phone' => $user->phone,
-                'created_at' => $user->created_at,
-                'updated_at' => $user->updated_at,
-            ]
-        ]);
-    });
-    
-    // Endpoint para que un ADMIN active/desactive el plan Premium de un usuario
-    // manualmente (sin pago). El usuario normal no puede auto-asignarse Premium.
-    Route::put('/users/{id}/plan', function (Illuminate\Http\Request $request, $id) {
-        $actor = $request->attributes->get('demo_user');
-        if (($actor['role'] ?? null) !== 'admin') {
-            return response()->json(['message' => 'No autorizado'], 403);
-        }
+        // Endpoint para actualizar usuario completo
+        Route::put('/users/{id}', function (Illuminate\Http\Request $request, $id) use ($isCoordinator, $forbidsTarget) {
+            $user = \App\Models\User::findOrFail($id);
+            if ($forbidsTarget($request, $user)) {
+                return response()->json(['message' => 'No autorizado'], 403);
+            }
 
-        $validated = $request->validate([
-            'plan' => 'required|in:basico,premium',
-            'plan_expires_at' => 'nullable|date|after:now',
-        ]);
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|email|unique:users,email,' . $id,
+                'phone' => 'nullable|string|max:20',
+                'role' => 'required|in:admin,alumno',
+                'active' => 'boolean',
+                'birth_date' => 'nullable|date',
+                'profile_image' => 'nullable|string',
+                'university_id' => 'nullable|exists:universities,id',
+            ]);
 
-        $user = \App\Models\User::findOrFail($id);
-        $user->plan = $validated['plan'];
-        // Premium: fecha opcional (null = sin expiración). Básico: limpiar fecha.
-        $user->plan_expires_at = $validated['plan'] === 'premium'
-            ? ($validated['plan_expires_at'] ?? null)
-            : null;
-        $user->save();
+            if ($isCoordinator($request) && $validated['role'] !== 'alumno') {
+                return response()->json(['message' => 'No autorizado'], 403);
+            }
 
-        return response()->json([
-            'message' => 'Plan actualizado correctamente',
-            'data' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'plan' => $user->plan,
-                'plan_expires_at' => $user->plan_expires_at,
-                'is_premium' => $user->isPremium(),
-            ],
-        ]);
+            $user->update($validated);
+            $user->load('university');
+
+            return response()->json([
+                'message' => 'Usuario actualizado correctamente',
+                'data' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'active' => (bool) $user->active,
+                    'phone' => $user->phone,
+                    'birth_date' => $user->birth_date,
+                    'profile_image' => $user->profile_image,
+                    'university_id' => $user->university_id,
+                    'university' => $user->university ? [
+                        'id' => $user->university->id,
+                        'name' => $user->university->name,
+                    ] : null,
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at,
+                ]
+            ]);
+        });
     });
 
-    // Endpoint para crear nuevo usuario
-    Route::post('/users', function (Illuminate\Http\Request $request) {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:6',
-            'phone' => 'nullable|string|max:20',
-            'role' => 'required|in:admin,alumno',
-            'birth_date' => 'nullable|date',
-            'university_id' => 'nullable|exists:universities,id',
-        ]);
-
-        $validated['password'] = \Illuminate\Support\Facades\Hash::make($validated['password']);
-        $validated['active'] = true;
-
-        $user = \App\Models\User::create($validated);
-        $user->load('university');
-
-        return response()->json([
-            'message' => 'Usuario creado correctamente',
-            'data' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role,
-                'active' => (bool) $user->active,
-                'phone' => $user->phone,
-                'birth_date' => $user->birth_date,
-                'profile_image' => $user->profile_image,
-                'university_id' => $user->university_id,
-                'university' => $user->university ? [
-                    'id' => $user->university->id,
-                    'name' => $user->university->name,
-                ] : null,
-                'created_at' => $user->created_at,
-                'updated_at' => $user->updated_at,
-            ]
-        ], 201);
-    });
-
-    // Endpoint para actualizar usuario completo
-    Route::put('/users/{id}', function (Illuminate\Http\Request $request, $id) {
-        $user = \App\Models\User::findOrFail($id);
-        
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $id,
-            'phone' => 'nullable|string|max:20',
-            'role' => 'required|in:admin,alumno',
-            'active' => 'boolean',
-            'birth_date' => 'nullable|date',
-            'profile_image' => 'nullable|string',
-            'university_id' => 'nullable|exists:universities,id',
-        ]);
-        
-        $user->update($validated);
-        $user->load('university');
-        
-        return response()->json([
-            'message' => 'Usuario actualizado correctamente',
-            'data' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role,
-                'active' => (bool) $user->active,
-                'phone' => $user->phone,
-                'birth_date' => $user->birth_date,
-                'profile_image' => $user->profile_image,
-                'university_id' => $user->university_id,
-                'university' => $user->university ? [
-                    'id' => $user->university->id,
-                    'name' => $user->university->name,
-                ] : null,
-                'created_at' => $user->created_at,
-                'updated_at' => $user->updated_at,
-            ]
-        ]);
-    });
-    
     // Ads CRUD endpoints (admin)
     Route::get('/ads', function () {
         $ads = \App\Models\Ad::orderBy('order')

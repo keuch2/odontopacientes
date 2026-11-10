@@ -13,7 +13,8 @@ class CheckRole
      */
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        $user = $request->user();
+        // Las rutas protegidas usan demo.auth, que deja el usuario en este atributo.
+        $user = $request->attributes->get('demo_user');
 
         if (!$user) {
             return response()->json([
@@ -21,11 +22,9 @@ class CheckRole
             ], 401);
         }
 
-        if (!in_array($user->role, $roles)) {
+        if (!in_array($user['role'] ?? null, $roles, true)) {
             return response()->json([
                 'message' => 'Sin permisos para acceder a este recurso',
-                'required_roles' => $roles,
-                'user_role' => $user->role
             ], 403);
         }
 

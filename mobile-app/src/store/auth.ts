@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { api } from '../lib/api'
+import { queryClient } from '../lib/queryClient'
 
 interface User {
   id: number
@@ -60,6 +61,9 @@ export const useAuthStore = create<AuthState>()(
           // Configurar token en el cliente API
           api.setAuthToken(access_token)
 
+          // Evita mostrar datos de una sesión anterior que terminó sin logout.
+          queryClient.clear()
+
           set({
             user,
             token: access_token,
@@ -77,7 +81,8 @@ export const useAuthStore = create<AuthState>()(
           // Ignorar errores de logout - el token ya puede estar invalidado
         })
         api.setAuthToken(null)
-        
+        queryClient.clear()
+
         set({
           user: null,
           token: null,
@@ -114,6 +119,7 @@ export const useAuthStore = create<AuthState>()(
           console.error('Token inválido:', error)
           // Token inválido, limpiar estado
           api.setAuthToken(null)
+          queryClient.clear()
           set({
             user: null,
             token: null,

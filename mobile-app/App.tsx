@@ -2,7 +2,7 @@ import React, { Component, ErrorInfo, useEffect, useState } from 'react'
 import { Platform, ScrollView, Text, View } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { PaperProvider, MD3LightTheme } from 'react-native-paper'
 import * as SplashScreen from 'expo-splash-screen'
 import * as Font from 'expo-font'
@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons'
 
 import Navigation from './src/navigation'
 import { useAuthStore } from './src/store/auth'
+import { queryClient } from './src/lib/queryClient'
 import { RegisterProvider } from './src/contexts/RegisterContext'
 import LoadingScreen from './src/components/LoadingScreen'
 import LoginScreen from './src/screens/LoginScreen'
@@ -20,17 +21,6 @@ import RegisterStep2Screen from './src/screens/RegisterStep2Screen'
 import RegisterStep3Screen from './src/screens/RegisterStep3Screen'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { NavigationContainer } from '@react-navigation/native'
-
-// Crear cliente de React Query
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutos
-    },
-  },
-})
 
 // Tema personalizado
 const theme = {

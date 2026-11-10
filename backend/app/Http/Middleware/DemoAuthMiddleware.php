@@ -29,6 +29,10 @@ class DemoAuthMiddleware
         if ($accessToken) {
             $user = $accessToken->tokenable;
             if ($user instanceof User) {
+                if (! $user->active) {
+                    return $this->unauthorizedResponse('Tu cuenta está desactivada.');
+                }
+
                 $user->load(['faculty.university', 'student']);
                 // Mismo builder que DemoUserFactory para que el array demo_user
                 // (incluido el plan / is_premium) nunca diverja entre ramas.

@@ -21,10 +21,36 @@ Route::prefix('auth')->group(function () {
     
     Route::post('/login', [\App\Http\Controllers\Api\AuthController::class, 'login']);
 
-    Route::post('/logout', function () {
+    Route::post('/logout', function (Request $request) {
+        \Laravel\Sanctum\PersonalAccessToken::findToken((string) $request->bearerToken())?->delete();
+
         return response()->json([
             'message' => 'Sesión finalizada correctamente.'
         ]);
+    })->middleware('demo.auth');
+
+    Route::post('/change-password', function (Request $request) {
+        $validated = $request->validate([
+            'current_password' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = \App\Models\User::findOrFail($request->attributes->get('demo_user')['id']);
+
+        if (! \Illuminate\Support\Facades\Hash::check($validated['current_password'], $user->password)) {
+            return response()->json([
+                'message' => 'La contraseña actual es incorrecta.',
+                'errors' => ['current_password' => ['La contraseña actual es incorrecta.']],
+            ], 422);
+        }
+
+        $user->update(['password' => \Illuminate\Support\Facades\Hash::make($validated['password'])]);
+
+        // Cierra las demás sesiones y conserva la actual.
+        $currentToken = \Laravel\Sanctum\PersonalAccessToken::findToken((string) $request->bearerToken());
+        $user->tokens()->where('id', '!=', $currentToken?->id)->delete();
+
+        return response()->json(['message' => 'Contraseña actualizada correctamente.']);
     })->middleware('demo.auth');
 
     Route::get('/me', function (Request $request) {
@@ -292,6 +318,7 @@ Route::middleware('demo.auth')->group(function () {
         Route::apiResource('patients', \App\Http\Controllers\Api\PatientController::class)->only(['store', 'update', 'destroy']);
 
         // Patient Procedures (escritura)
+        Route::post('/patients/{patient}/procedures/batch', [\App\Http\Controllers\Api\PatientProcedureController::class, 'storeBatch']);
         Route::post('/patients/{patient}/procedures', [\App\Http\Controllers\Api\PatientProcedureController::class, 'store']);
         Route::put('/patient-procedures/{patientProcedure}', [\App\Http\Controllers\Api\PatientProcedureController::class, 'update']);
         Route::delete('/patient-procedures/{patientProcedure}', [\App\Http\Controllers\Api\PatientProcedureController::class, 'destroy']);

@@ -33,11 +33,37 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions) {
         // Configuración de excepciones para API
         $exceptions->render(function (Exception $e, $request) {
-            if ($request->is('api/*')) {
-                return response()->json([
-                    'message' => $e->getMessage(),
-                    'error' => config('app.debug') ? $e->getTrace() : null
-                ], 500);
+            if (! $request->is('api/*')) {
+                return null;
             }
+
+            if ($e instanceof \Illuminate\Validation\ValidationException
+                || $e instanceof \Illuminate\Auth\AuthenticationException
+                || $e instanceof \Illuminate\Http\Exceptions\HttpResponseException) {
+                return null;
+            }
+
+            if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                return response()->json(['message' => 'Recurso no encontrado.'], 404);
+            }
+
+            if ($e instanceof \Illuminate\Auth\Access\AuthorizationException) {
+                return response()->json(['message' => 'No autorizado.'], 403);
+            }
+
+            if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                $status = $e->getStatusCode();
+                $messages = [
+                    403 => 'No autorizado.',
+                    404 => 'Recurso no encontrado.',
+                    405 => 'Método no permitido.',
+                    413 => 'El archivo es demasiado grande.',
+                    429 => 'Demasiados intentos. Espera un momento.',
+                ];
+
+                return response()->json(['message' => $messages[$status] ?? 'No se pudo completar la solicitud.'], $status);
+            }
+
+            return response()->json(['message' => 'Ocurrió un error inesperado. Intenta nuevamente.'], 500);
         });
     })->create();

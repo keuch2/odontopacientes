@@ -38,10 +38,11 @@ class AssignmentsController extends Controller
                     'sessions_completed' => $assignment->sessions_completed ?? 0,
                     'patient_procedure' => [
                         'id' => $assignment->patientProcedure->id,
+                        'tooth_description' => $assignment->patientProcedure->tooth_description,
                         'treatment' => [
                             'id' => $assignment->patientProcedure->treatment->id,
                             'name' => $assignment->patientProcedure->treatment->name,
-                            'estimated_sessions' => $assignment->patientProcedure->treatment->estimated_sessions ?? 1,
+                            'estimated_sessions' => $assignment->patientProcedure->estimated_sessions ?? 1,
                         ],
                         'treatment_subclass' => $assignment->patientProcedure->treatmentSubclass ? [
                             'id' => $assignment->patientProcedure->treatmentSubclass->id,
@@ -127,11 +128,12 @@ class AssignmentsController extends Controller
             'notes' => $assignment->notes,
             'patient_procedure' => [
                 'id' => $assignment->patientProcedure->id,
+                'tooth_description' => $assignment->patientProcedure->tooth_description,
                 'treatment' => [
                     'id' => $assignment->patientProcedure->treatment->id,
                     'name' => $assignment->patientProcedure->treatment->name,
                     'description' => $assignment->patientProcedure->treatment->description,
-                    'estimated_sessions' => $assignment->patientProcedure->treatment->estimated_sessions ?? 1,
+                    'estimated_sessions' => $assignment->patientProcedure->estimated_sessions ?? 1,
                 ],
                 'treatment_subclass' => $assignment->patientProcedure->treatmentSubclass ? [
                     'id' => $assignment->patientProcedure->treatmentSubclass->id,

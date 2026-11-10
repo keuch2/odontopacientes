@@ -46,7 +46,7 @@ class NotificationPreferencesController extends Controller
         $userId = is_array($user) ? ($user['id'] ?? null) : ($user->id ?? null);
 
         $request->validate([
-            'treatment_ids' => 'required|array',
+            'treatment_ids' => 'present|array',
             'treatment_ids.*' => 'integer|exists:treatments,id',
         ]);
 

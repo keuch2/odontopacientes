@@ -114,7 +114,7 @@ class Assignment extends Model
      */
     public function getSessionProgressAttribute(): array
     {
-        $estimated = $this->patientProcedure->treatment->estimated_sessions ?? 1;
+        $estimated = $this->patientProcedure->estimated_sessions ?? 1;
         $completed = $this->sessions_completed;
         
         return [

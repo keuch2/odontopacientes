@@ -128,8 +128,8 @@ class TreatmentSessionController extends Controller
             'sessions_total' => 'required|integer|min:1|max:50',
         ]);
 
-        $assignment->patientProcedure->treatment->update([
-            'estimated_sessions' => $validated['sessions_total'],
+        $assignment->patientProcedure->update([
+            'sessions_total' => $validated['sessions_total'],
         ]);
 
         return response()->json([

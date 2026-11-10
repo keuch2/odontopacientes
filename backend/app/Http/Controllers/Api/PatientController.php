@@ -36,29 +36,22 @@ class PatientController extends Controller
                     });
                 });
             })
-            ->when($request->chair_id, function ($query, $chairId) {
-                return $query->whereHas('patientProcedures', function ($q) use ($chairId) {
-                    $q->where(function ($sub) use ($chairId) {
-                        $sub->where('chair_id', $chairId)
-                            ->orWhereHas('treatment', function ($t) use ($chairId) {
-                                $t->where('chair_id', $chairId);
-                            });
+            // Todos los filtros clínicos deben cumplirse en el mismo procedimiento.
+            ->when($request->chair_id || $request->treatments || $request->tooth_fdi || $request->treatment_subclass_id, function ($query) use ($request) {
+                return $query->whereHas('patientProcedures', function ($q) use ($request) {
+                    $q->when($request->chair_id, function ($q, $chairId) {
+                        $q->where(function ($sub) use ($chairId) {
+                            $sub->where('chair_id', $chairId)
+                                ->orWhereHas('treatment', fn ($t) => $t->where('chair_id', $chairId));
+                        });
+                    })
+                    ->when($request->treatments, fn ($q, $treatments) => $q->whereIn('treatment_id', $treatments))
+                    ->when($request->treatment_subclass_id, fn ($q, $subclassId) => $q->where('treatment_subclass_id', $subclassId))
+                    ->when($request->tooth_fdi, function ($q, $toothFdi) {
+                        // tooth_fdi puede ser una lista, como en las prótesis.
+                        $q->whereRaw("FIND_IN_SET(?, REPLACE(tooth_fdi, ' ', ''))", [$toothFdi])
+                            ->whereNotIn('status', ['ausente', 'cancelado']);
                     });
-                });
-            })
-            ->when($request->treatments, function ($query, $treatments) {
-                return $query->whereHas('patientProcedures', function ($q) use ($treatments) {
-                    $q->whereIn('treatment_id', $treatments);
-                });
-            })
-            ->when($request->tooth_fdi, function ($query, $toothFdi) {
-                return $query->whereHas('patientProcedures', function ($q) use ($toothFdi) {
-                    $q->where('tooth_fdi', $toothFdi);
-                });
-            })
-            ->when($request->treatment_subclass_id, function ($query, $subclassId) {
-                return $query->whereHas('patientProcedures', function ($q) use ($subclassId) {
-                    $q->where('treatment_subclass_id', $subclassId);
                 });
             })
             ->paginate($request->per_page ?? 15);
@@ -154,7 +147,7 @@ class PatientController extends Controller
                     'name' => $procedure->treatment->name,
                     'code' => $procedure->treatment->code,
                     'requires_tooth' => $procedure->treatment->requires_tooth,
-                    'estimated_sessions' => $procedure->treatment->estimated_sessions,
+                    'estimated_sessions' => $procedure->estimated_sessions,
                 ],
                 'chair' => [
                     'id' => $procedure->chair->id,

@@ -19,6 +19,7 @@ class PatientProcedure extends Model
         'treatment_subclass_option_id',
         'chair_id',
         'tooth_fdi',
+        'sessions_total',
         'tooth_surface',
         'is_repair',
         'status',
@@ -131,6 +132,15 @@ class PatientProcedure extends Model
     public function isContraindicated(): bool
     {
         return $this->status === 'contraindicado';
+    }
+
+    /**
+     * Sesiones previstas para este procedimiento: las indicadas al cargarlo
+     * o, si no se indicaron, las estimadas para el tratamiento.
+     */
+    public function getEstimatedSessionsAttribute(): int
+    {
+        return $this->sessions_total ?? $this->treatment?->estimated_sessions ?? 1;
     }
 
     /**

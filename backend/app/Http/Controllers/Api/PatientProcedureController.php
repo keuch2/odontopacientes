@@ -7,7 +7,9 @@ use App\Models\Patient;
 use App\Models\PatientProcedure;
 use App\Models\Treatment;
 use App\Models\Chair;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class PatientProcedureController extends Controller
@@ -31,7 +33,7 @@ class PatientProcedureController extends Controller
                         'name' => $procedure->treatment->name,
                         'code' => $procedure->treatment->code,
                         'requires_tooth' => $procedure->treatment->requires_tooth,
-                        'estimated_sessions' => $procedure->treatment->estimated_sessions,
+                        'estimated_sessions' => $procedure->estimated_sessions,
                         'subclasses' => $procedure->treatment->subclasses ? $procedure->treatment->subclasses->map(fn ($s) => [
                             'id' => $s->id,
                             'name' => $s->name,
@@ -76,6 +78,41 @@ class PatientProcedureController extends Controller
     }
 
     /**
+     * Crear un procedimiento por diente: se guardan todos o ninguno.
+     */
+    public function storeBatch(Request $request, Patient $patient)
+    {
+        $validated = $request->validate([
+            'teeth' => 'required|array|min:1|max:52',
+            'teeth.*' => 'required|string|max:10',
+        ]);
+
+        try {
+            return DB::transaction(function () use ($request, $patient, $validated) {
+                $procedures = [];
+
+                foreach ($validated['teeth'] as $tooth) {
+                    $request->merge(['tooth_fdi' => $tooth]);
+                    $response = $this->store($request, $patient);
+
+                    if ($response->getStatusCode() >= 400) {
+                        throw new HttpResponseException($response);
+                    }
+
+                    $procedures[] = $response->getData(true)['data'];
+                }
+
+                return response()->json([
+                    'message' => 'Procedimientos creados correctamente',
+                    'data' => $procedures,
+                ], 201);
+            });
+        } catch (HttpResponseException $e) {
+            return $e->getResponse();
+        }
+    }
+
+    /**
      * Crear nuevo procedimiento para un paciente
      */
     public function store(Request $request, Patient $patient)
@@ -88,7 +125,7 @@ class PatientProcedureController extends Controller
             'treatment_subclass_option_id' => 'nullable|exists:treatment_subclass_options,id',
             'chair_id' => 'nullable|exists:chairs,id',
             'tooth_description' => 'nullable|string|max:255',
-            'tooth_fdi' => 'required|string|max:255',
+            'tooth_fdi' => 'nullable|string|max:255',
             'tooth_surface' => 'nullable|string|max:10',
             'notes' => 'nullable|string',
             'estimated_price' => 'nullable|numeric|min:0',
@@ -108,13 +145,26 @@ class PatientProcedureController extends Controller
         }
 
         if ($isAusente && !$request->treatment_id) {
-            $treatment = Treatment::where('code', 'AUS-001')->first();
-            if (!$treatment) {
-                return response()->json(['message' => 'Tratamiento "Diente Ausente" no encontrado. Contacte al administrador.'], 422);
-            }
+            $treatment = Treatment::firstOrCreate(
+                ['code' => 'AUS-001'],
+                [
+                    'chair_id' => $request->chair_id ?? Chair::orderBy('id')->value('id'),
+                    'name' => 'Diente Ausente',
+                    'requires_tooth' => true,
+                    'active' => false,
+                ]
+            );
         } else {
             $treatment = Treatment::find($request->treatment_id);
         }
+
+        if (($isAusente || $treatment->requires_tooth) && empty($request->tooth_fdi)) {
+            return response()->json([
+                'message' => 'Datos de entrada inválidos',
+                'errors' => ['tooth_fdi' => ['Debes indicar el diente para este tratamiento.']],
+            ], 422);
+        }
+
         $chairId = $request->chair_id ?? ($treatment ? $treatment->chair_id : Chair::first()?->id);
 
         // Build tooth description from FDI and surface if provided
@@ -144,6 +194,7 @@ class PatientProcedureController extends Controller
             'notes' => $request->notes,
             'priority' => $priorityValue,
             'status' => $request->status ?? 'disponible',
+            'sessions_total' => $request->sessions_total,
             'created_by' => $userId,
         ]);
 
@@ -158,7 +209,6 @@ class PatientProcedureController extends Controller
                 'student_id' => $userId,
                 'status' => 'activa',
                 'started_at' => now(),
-                'estimated_sessions' => $request->sessions_total ?? $treatment->estimated_sessions ?? 1,
                 'sessions_completed' => 0,
             ]);
             
@@ -238,7 +288,7 @@ class PatientProcedureController extends Controller
                     'name' => $patientProcedure->treatment->name,
                     'code' => $patientProcedure->treatment->code,
                     'requires_tooth' => $patientProcedure->treatment->requires_tooth,
-                    'estimated_sessions' => $patientProcedure->treatment->estimated_sessions,
+                    'estimated_sessions' => $patientProcedure->estimated_sessions,
                     'subclasses' => $patientProcedure->treatment->subclasses ? $patientProcedure->treatment->subclasses->map(fn ($s) => [
                         'id' => $s->id,
                         'name' => $s->name,
@@ -408,17 +458,34 @@ class PatientProcedureController extends Controller
             ], 401);
         }
 
-        // Crear la asignación
-        $assignment = \App\Models\Assignment::create([
-            'patient_procedure_id' => $patientProcedure->id,
-            'student_id' => $user['id'],
-            'started_at' => now(),
-            'status' => 'activa',
-            'sessions_completed' => 0,
-        ]);
+        // Bloquea el procedimiento para que dos alumnos no lo tomen a la vez.
+        $assignment = DB::transaction(function () use ($patientProcedure, $user) {
+            $locked = PatientProcedure::whereKey($patientProcedure->id)->lockForUpdate()->first();
 
-        // Actualizar el estado del procedimiento a "proceso"
-        $patientProcedure->update(['status' => 'proceso']);
+            if ($locked->status !== 'disponible' || $locked->activeAssignment()->exists()) {
+                return null;
+            }
+
+            $assignment = \App\Models\Assignment::create([
+                'patient_procedure_id' => $locked->id,
+                'student_id' => $user['id'],
+                'started_at' => now(),
+                'status' => 'activa',
+                'sessions_completed' => 0,
+            ]);
+
+            $locked->update(['status' => 'proceso']);
+
+            return $assignment;
+        });
+
+        if (! $assignment) {
+            return response()->json([
+                'message' => 'Este procedimiento ya tiene una asignación activa'
+            ], 422);
+        }
+
+        $patientProcedure->refresh();
 
         // Registrar auditoría
         \App\Models\Audit::log('assigned', 'PatientProcedure', $patientProcedure->id, [

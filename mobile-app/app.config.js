@@ -20,12 +20,7 @@ const getApiUrl = () => {
     return 'http://192.168.0.2/odontopacientes/backend/public/api';
   }
 
-  // Para preview/staging
-  if (IS_PREVIEW) {
-    return 'https://staging-api.odontopacientes.com/api';
-  }
-
-  // Para producción
+  // Preview y producción usan siempre la API de producción
   return 'https://codexpy.com/odontopacientes/api';
 };
 

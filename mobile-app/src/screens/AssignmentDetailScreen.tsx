@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Ionicons } from '@expo/vector-icons'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import * as ImagePicker from 'expo-image-picker'
-import { COMPATIBLE_IMAGE_OPTIONS } from '../lib/imagePicker'
+import { PHOTO_PICKER_OPTIONS } from '../lib/imagePicker'
 import { AppText } from '../components/ui'
 import { colors } from '../theme/colors'
 import { spacing } from '../theme/spacing'
@@ -238,7 +238,6 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assignment', assignmentId] })
-      queryClient.invalidateQueries({ queryKey: ['myAssignments'] })
       setCompleteModalVisible(false)
       setFinalNotes('')
       fetchProcedureDetails()
@@ -257,7 +256,6 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assignment', assignmentId] })
-      queryClient.invalidateQueries({ queryKey: ['myAssignments'] })
       setAbandonModalVisible(false)
       setAbandonReason('')
       fetchProcedureDetails()
@@ -304,6 +302,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
   const patientAge = patientBirthDate ? new Date().getFullYear() - new Date(patientBirthDate).getFullYear() : procedure?.patient?.age || 0
 
   const treatmentName = procedure?.treatment?.name || assignmentData?.patient_procedure?.treatment?.name || ''
+  const toothDescription = procedure?.tooth_description || (assignmentData?.patient_procedure as any)?.tooth_description
   const chairName = procedure?.chair?.name || assignmentData?.patient_procedure?.chair?.name || ''
   const treatmentDescription = procedure?.description || assignmentData?.patient_procedure?.treatment?.description || ''
   const estimatedSessions = procedure?.treatment?.estimated_sessions || assignmentData?.patient_procedure?.treatment?.estimated_sessions || 1
@@ -520,8 +519,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: isCamera,
       allowsMultipleSelection: !isCamera,
-      ...COMPATIBLE_IMAGE_OPTIONS,
-      quality: 0.8,
+      ...PHOTO_PICKER_OPTIONS,
       base64: true,
     })
     if (!result.canceled && result.assets.length > 0) {
@@ -823,7 +821,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
               <Ionicons name="medical" size={20} color={colors.brandTurquoise} />
               <View style={{ marginLeft: spacing.sm, flex: 1 }}>
                 <AppText variant="caption" color="textSecondary">Procedimiento</AppText>
-                <AppText variant="body" weight="semibold" color="brandNavy">{treatmentName}</AppText>
+                <AppText variant="body" weight="semibold" color="brandNavy">{treatmentName}{toothDescription ? ` · ${toothDescription}` : ''}</AppText>
               </View>
             </View>
             <View style={styles.infoRow}>

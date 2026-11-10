@@ -51,11 +51,10 @@ export default function ChairPatientsScreen({ route, navigation }: any) {
   const { data: patientsData, isLoading: patientsLoading } = useQuery({
     queryKey: ['patients-by-chair', chairId, selectedTooth, selectedSubclassId],
     queryFn: async () => {
-      const params: any = { chair_id: chairId, per_page: 100 }
+      const params: any = { chair_id: chairId }
       if (selectedTooth) params.tooth_fdi = selectedTooth
       if (selectedSubclassId) params.treatment_subclass_id = selectedSubclassId
-      const response = await api.patients.search(params)
-      return response.data.data || []
+      return api.patients.searchAll(params)
     },
     enabled: !!chairId,
   })

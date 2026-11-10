@@ -10,7 +10,7 @@ import { api } from '../lib/api'
 import { useIsPremium } from '../store/auth'
 import AddProcedureModal from '../components/AddProcedureModal'
 
-type TabType = 'disponible' | 'proceso' | 'finalizado' | 'cancelado'
+type TabType = 'disponible' | 'proceso' | 'finalizado' | 'cancelado' | 'contraindicado' | 'ausente'
 
 interface PatientProcedure {
   id: number
@@ -89,12 +89,10 @@ export default function PatientDetailScreen({ navigation }: any) {
       city: patientData.city || '',
       university: patientData.faculty?.name || '',
       address: patientData.address || '',
-      document: patientData.document || '',
+      document: patientData.full_document || patientData.document_number || '',
       phone: patientData.phone || '',
-      email: patientData.email || '',
-      civilStatus: patientData.civil_status || '',
-      weight: patientData.weight ? `${patientData.weight} kg` : '',
-      height: patientData.height ? `${patientData.height}` : '',
+      emergencyContact: patientData.emergency_contact || '',
+      emergencyPhone: patientData.emergency_phone || '',
       admissionDate: patientData.created_at ? new Date(patientData.created_at).toLocaleDateString('es-PY') : '',
       anamnesis: anamnesisItems,
     }
@@ -120,6 +118,8 @@ export default function PatientDetailScreen({ navigation }: any) {
     proceso: allProcedures.filter((p: any) => p.status === 'proceso').length,
     finalizado: allProcedures.filter((p: any) => p.status === 'finalizado').length,
     cancelado: allProcedures.filter((p: any) => p.status === 'cancelado').length,
+    contraindicado: allProcedures.filter((p: any) => p.status === 'contraindicado').length,
+    ausente: allProcedures.filter((p: any) => p.status === 'ausente').length,
   }
 
   // Verificar si el alumno tiene al menos un procedimiento activo con este paciente
@@ -148,7 +148,10 @@ export default function PatientDetailScreen({ navigation }: any) {
       case 'disponible':
         return colors.brandTurquoise
       case 'cancelado':
+      case 'ausente':
         return '#9CA3AF'
+      case 'contraindicado':
+        return '#9333EA'
       default:
         return colors.textMuted
     }
@@ -164,6 +167,10 @@ export default function PatientDetailScreen({ navigation }: any) {
         return 'Disponible'
       case 'cancelado':
         return 'Cancelado'
+      case 'contraindicado':
+        return 'Contraindicado'
+      case 'ausente':
+        return 'Ausente'
       default:
         return status
     }
@@ -254,23 +261,14 @@ export default function PatientDetailScreen({ navigation }: any) {
           <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Dirección</AppText>
           <AppText color="textMuted" style={styles.infoValue}>{patient.address || '-'}</AppText>
 
-          <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Cédula de Identidad</AppText>
+          <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Documento</AppText>
           <AppText color="textMuted" style={styles.infoValue}>{patient.document || '-'}</AppText>
 
           <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Teléfono</AppText>
           <AppText color="textMuted" style={styles.infoValue}>{patient.phone || '-'}</AppText>
 
-          <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Email</AppText>
-          <AppText color="textMuted" style={styles.infoValue}>{patient.email || '-'}</AppText>
-
-          <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Estado Civil</AppText>
-          <AppText color="textMuted" style={styles.infoValue}>{patient.civilStatus || '-'}</AppText>
-
-          <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Peso</AppText>
-          <AppText color="textMuted" style={styles.infoValue}>{patient.weight || '-'}</AppText>
-
-          <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Estatura</AppText>
-          <AppText color="textMuted" style={styles.infoValue}>{patient.height || '-'}</AppText>
+          <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Contacto de Emergencia</AppText>
+          <AppText color="textMuted" style={styles.infoValue}>{[patient.emergencyContact, patient.emergencyPhone].filter(Boolean).join(' · ') || '-'}</AppText>
 
           <AppText variant="body" color="brandNavy" weight="semibold" style={styles.infoLabel}>Fecha de Admisión</AppText>
           <AppText color="textMuted" style={styles.infoValue}>{patient.admissionDate || '-'}</AppText>
@@ -291,13 +289,6 @@ export default function PatientDetailScreen({ navigation }: any) {
 
         <View style={styles.section}>
           <AppText variant="h3" color="brandNavy" weight="bold" style={styles.sectionTitle}>
-            Tipo de Mordida
-          </AppText>
-          <AppText color="textMuted">Clase 1</AppText>
-        </View>
-
-        <View style={styles.section}>
-          <AppText variant="h3" color="brandNavy" weight="bold" style={styles.sectionTitle}>
             Odontograma
           </AppText>
           <AppButton
@@ -313,7 +304,7 @@ export default function PatientDetailScreen({ navigation }: any) {
             Procedimientos
           </AppText>
 
-          <View style={styles.tabContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabContainer}>
             <TouchableOpacity
               style={[styles.tab, activeTab === 'disponible' && styles.tabActive]}
               onPress={() => setActiveTab('disponible')}
@@ -367,7 +358,35 @@ export default function PatientDetailScreen({ navigation }: any) {
                 </AppText>
               </TouchableOpacity>
             )}
-          </View>
+            {procedureCounts.contraindicado > 0 && (
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'contraindicado' && styles.tabActive, activeTab === 'contraindicado' && { backgroundColor: '#9CA3AF' }]}
+                onPress={() => setActiveTab('contraindicado')}
+              >
+                <AppText
+                  color={activeTab === 'contraindicado' ? 'white' : 'textMuted'}
+                  weight="semibold"
+                  style={styles.tabText}
+                >
+                  Contraindicados ({procedureCounts.contraindicado})
+                </AppText>
+              </TouchableOpacity>
+            )}
+            {procedureCounts.ausente > 0 && (
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'ausente' && styles.tabActive, activeTab === 'ausente' && { backgroundColor: '#9CA3AF' }]}
+                onPress={() => setActiveTab('ausente')}
+              >
+                <AppText
+                  color={activeTab === 'ausente' ? 'white' : 'textMuted'}
+                  weight="semibold"
+                  style={styles.tabText}
+                >
+                  Ausentes ({procedureCounts.ausente})
+                </AppText>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
 
           {filteredProcedures.length > 0 ? (
             filteredProcedures.map((procedure: any) => (
@@ -411,17 +430,9 @@ export default function PatientDetailScreen({ navigation }: any) {
           ) : (
             <View style={styles.emptyState}>
               <AppText color="textMuted" align="center">
-                No hay procedimientos {activeTab === 'disponible' ? 'disponibles' : activeTab === 'proceso' ? 'en proceso' : 'finalizados'}
+                No hay procedimientos {activeTab === 'disponible' ? 'disponibles' : activeTab === 'proceso' ? 'en proceso' : 'en esta categoría'}
               </AppText>
             </View>
-          )}
-
-          {isPremium && activeTab === 'disponible' && (
-            <AppButton
-              title="Agendar Nuevo Procedimiento"
-              onPress={() => navigation.navigate('ProcedureSchedule', { patientId: 1 })}
-              style={styles.scheduleButton}
-            />
           )}
         </View>
 
@@ -587,14 +598,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   tabContainer: {
+    flexGrow: 1,
     flexDirection: 'row',
     marginBottom: spacing.md,
     gap: spacing.xs,
   },
   tab: {
-    flex: 1,
+    flexGrow: 1,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: spacing.md,
     borderRadius: 8,
     backgroundColor: colors.background,
     borderWidth: 1,

@@ -122,8 +122,7 @@ export default function CatedrasScreen({ navigation }: any) {
       if (chairFilter.chairId) params.chair_id = chairFilter.chairId
       if (chairFilter.treatmentId) params.treatments = [chairFilter.treatmentId]
       if (chairFilter.subclassId) params.treatment_subclass_id = chairFilter.subclassId
-      const response = await api.patients.search(params)
-      return response.data.data || []
+      return api.patients.searchAll(params)
     },
     enabled: debouncedSearchText.trim().length > 0 || hasAnyFilter,
   })

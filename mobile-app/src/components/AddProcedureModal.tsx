@@ -12,7 +12,7 @@ import {
 } from 'react-native-paper';
 import { Text, View, ScrollView, StyleSheet, Alert, TouchableOpacity, FlatList, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { COMPATIBLE_IMAGE_OPTIONS } from '../lib/imagePicker';
+import { PHOTO_PICKER_OPTIONS } from '../lib/imagePicker';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../lib/api';
 
@@ -35,6 +35,8 @@ interface Treatment {
   id: number;
   name: string;
   chair_id: number;
+  code?: string;
+  requires_tooth?: boolean;
   subclasses?: Subclass[];
   options?: SubclassOption[];
 }
@@ -102,7 +104,7 @@ export default function AddProcedureModal({
   // Filter treatments by chair
   useEffect(() => {
     if (selectedChairId) {
-      const filtered = treatments.filter(t => t.chair_id === selectedChairId);
+      const filtered = treatments.filter(t => t.chair_id === selectedChairId && t.code !== 'AUS-001');
       setFilteredTreatments(filtered);
       if (selectedTreatmentId && !filtered.find(t => t.id === selectedTreatmentId)) {
         setSelectedTreatmentId(null);
@@ -161,13 +163,11 @@ export default function AddProcedureModal({
 
     setLoading(true);
     try {
-      for (const toothFdi of teethToUse) {
-        await api.procedures.createForPatient(patientId, {
-          tooth_fdi: toothFdi,
-          status: 'ausente',
-          notes: 'Diente ausente',
-        });
-      }
+      await api.procedures.createBatch(patientId, {
+        teeth: teethToUse,
+        status: 'ausente',
+        notes: 'Diente ausente',
+      });
       Alert.alert('Éxito', `${teethToUse.length} diente(s) marcado(s) como ausente(s)`);
       resetForm();
       onSuccess();
@@ -186,40 +186,43 @@ export default function AddProcedureModal({
       ? selectedTeeth
       : toothFdiInput.trim() ? toothFdiInput.split(',').map(t => t.trim()).filter(Boolean) : [];
 
-    if (teethToUse.length === 0) {
-      Alert.alert('Error', 'Debes indicar al menos un diente');
-      return;
-    }
-
     // Validation
     if (!selectedTreatmentId) {
       Alert.alert('Error', 'Debes seleccionar un tratamiento');
       return;
     }
 
+    const toothRequired = treatments.find(t => t.id === selectedTreatmentId)?.requires_tooth !== false;
+    if (toothRequired && teethToUse.length === 0) {
+      Alert.alert('Error', 'Debes indicar al menos un diente');
+      return;
+    }
+
     setLoading(true);
     try {
       const createdProcedureIds: number[] = [];
-      for (const toothFdi of teethToUse) {
-        const res = await api.procedures.createForPatient(patientId, {
-          treatment_id: selectedTreatmentId,
-          treatment_subclass_id: selectedSubclassId || null,
-          treatment_subclass_option_id: selectedOptionId || null,
-          tooth_fdi: toothFdi,
-          tooth_surface: toothSurface || null,
-          is_repair: isRepair,
-          status: autoAssign ? 'proceso' : status,
-          sessions_total: parseInt(sessionsTotal) || 1,
-          sessions_completed: 0,
-          notes: notes || null,
-          auto_assign: autoAssign,
-        });
-        if (res.data?.data?.id) {
-          createdProcedureIds.push(res.data.data.id);
-        }
+      const payload = {
+        treatment_id: selectedTreatmentId,
+        treatment_subclass_id: selectedSubclassId || null,
+        treatment_subclass_option_id: selectedOptionId || null,
+        tooth_surface: toothSurface || null,
+        is_repair: isRepair,
+        status: autoAssign ? 'proceso' : status,
+        sessions_total: parseInt(sessionsTotal) || 1,
+        notes: notes || null,
+        auto_assign: autoAssign,
+      };
+
+      if (teethToUse.length > 0) {
+        const res = await api.procedures.createBatch(patientId, { ...payload, teeth: teethToUse });
+        createdProcedureIds.push(...(res.data?.data || []).map((procedure: any) => procedure.id));
+      } else {
+        const res = await api.procedures.createForPatient(patientId, payload);
+        if (res.data?.data?.id) createdProcedureIds.push(res.data.data.id);
       }
 
       // Upload pending photos to each created procedure
+      let failedPhotos = 0;
       if (pendingPhotos.length > 0 && createdProcedureIds.length > 0) {
         setUploadingPhotos(true);
         for (const procId of createdProcedureIds) {
@@ -229,6 +232,7 @@ export default function AddProcedureModal({
                 image: `data:image/jpeg;base64,${photo.base64}`,
               });
             } catch (photoErr) {
+              failedPhotos++;
               console.error('Error uploading photo to procedure:', photoErr);
             }
           }
@@ -236,7 +240,12 @@ export default function AddProcedureModal({
         setUploadingPhotos(false);
       }
 
-      Alert.alert('Éxito', `Procedimiento agregado a ${teethToUse.length} diente(s)`);
+      const created = teethToUse.length > 0 ? `Procedimiento agregado a ${teethToUse.length} diente(s)` : 'Procedimiento agregado';
+      if (failedPhotos > 0) {
+        Alert.alert('Procedimiento guardado', `${created}, pero ${failedPhotos} foto(s) no se pudieron subir.`);
+      } else {
+        Alert.alert('Éxito', created);
+      }
       resetForm();
       onSuccess();
       onDismiss();
@@ -301,8 +310,7 @@ export default function AddProcedureModal({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: isCamera,
       allowsMultipleSelection: !isCamera,
-      ...COMPATIBLE_IMAGE_OPTIONS,
-      quality: 0.8,
+      ...PHOTO_PICKER_OPTIONS,
       base64: true,
     });
 

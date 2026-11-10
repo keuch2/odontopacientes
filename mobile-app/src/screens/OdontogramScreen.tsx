@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
-import { COMPATIBLE_IMAGE_OPTIONS } from '../lib/imagePicker'
+import { PHOTO_PICKER_OPTIONS } from '../lib/imagePicker'
 import { api } from '../lib/api'
 import { useAuthStore, useIsPremium } from '../store/auth'
 import AddProcedureModal from '../components/AddProcedureModal'
@@ -192,8 +192,7 @@ export default function OdontogramScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: isCamera,
       allowsMultipleSelection: !isCamera,
-      ...COMPATIBLE_IMAGE_OPTIONS,
-      quality: 0.8,
+      ...PHOTO_PICKER_OPTIONS,
       base64: true,
     })
 
@@ -293,6 +292,7 @@ export default function OdontogramScreen() {
     if (!toothProcedures || toothProcedures.length === 0) return null
 
     if (toothProcedures.some(p => p.status === 'ausente')) return 'ausente'
+    if (toothProcedures.some(p => p.status === 'contraindicado')) return 'contraindicado'
     if (toothProcedures.some(p => p.status === 'proceso')) return 'proceso'
     if (toothProcedures.some(p => p.status === 'disponible')) return 'disponible'
     if (toothProcedures.some(p => p.status === 'finalizado')) return 'finalizado'

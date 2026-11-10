@@ -68,6 +68,19 @@ export default function NotificationsScreen() {
     }
   }
 
+  const openNotification = (item: Notification) => {
+    if (!item.read_at) handleMarkAsRead(item.id)
+
+    const data = item.data ?? {}
+    const nav = navigation as any
+    // student_id indica que otro alumno tomó el caso: el creador solo ve la ficha.
+    if (data.assignment_id && !data.student_id) {
+      nav.navigate('MyPatients', { screen: 'AssignmentDetail', params: { assignmentId: data.assignment_id } })
+    } else if (data.patient_id) {
+      nav.navigate('Catedras', { screen: 'PatientDetail', params: { patientId: data.patient_id } })
+    }
+  }
+
   const handleMarkAllAsRead = async () => {
     try {
       await api.notifications.markAllAsRead()
@@ -85,7 +98,7 @@ export default function NotificationsScreen() {
       <TouchableOpacity
         style={[styles.notificationCard, isUnread && styles.notificationUnread]}
         activeOpacity={0.7}
-        onPress={() => isUnread && handleMarkAsRead(item.id)}
+        onPress={() => openNotification(item)}
       >
         <View style={[styles.iconContainer, { backgroundColor: `${icon.color}15` }]}>
           <Ionicons name={icon.name} size={24} color={icon.color} />

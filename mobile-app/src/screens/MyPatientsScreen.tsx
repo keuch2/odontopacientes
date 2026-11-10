@@ -15,6 +15,7 @@ interface Assignment {
   sessions_completed: number
   assigned_at: string
   patient_procedure: {
+    tooth_description?: string | null
     id: number
     treatment: {
       id: number
@@ -163,6 +164,7 @@ export default function MyPatientsScreen({ navigation }: any) {
               {assignment.patient_procedure.treatment.name}
               {assignment.patient_procedure.treatment_subclass ? ` / ${assignment.patient_procedure.treatment_subclass.name}` : ''}
               {assignment.patient_procedure.treatment_subclass_option ? ` / ${assignment.patient_procedure.treatment_subclass_option.name}` : ''}
+              {assignment.patient_procedure.tooth_description ? ` · ${assignment.patient_procedure.tooth_description}` : ''}
             </AppText>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: statusConfig.bgColor }]}>

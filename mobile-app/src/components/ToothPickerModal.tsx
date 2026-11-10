@@ -12,6 +12,11 @@ const ALL_TEETH = [
   31, 32, 33, 34, 35, 36, 37, 38,
 ]
 
+const TEMPORARY_TEETH = [
+  55, 54, 53, 52, 51, 61, 62, 63, 64, 65,
+  85, 84, 83, 82, 81, 71, 72, 73, 74, 75,
+]
+
 interface ToothPickerModalProps {
   visible: boolean
   onClose: () => void
@@ -73,6 +78,24 @@ export function ToothPickerModal({ visible, onClose, selectedTooth, onToothChang
           <AppText color="textMuted" style={{ marginBottom: 8, marginTop: spacing.md, paddingHorizontal: spacing.lg, fontSize: 13 }}>Arcada Inferior</AppText>
           <View style={styles.grid}>
             {ALL_TEETH.slice(16).map((tooth) => (
+              <TouchableOpacity
+                key={tooth}
+                style={[styles.item, selectedTooth === tooth.toString() && styles.itemActive]}
+                onPress={() => handleToothSelect(tooth)}
+              >
+                <AppText
+                  color={selectedTooth === tooth.toString() ? 'white' : 'brandNavy'}
+                  weight="bold"
+                  style={{ fontSize: 13 }}
+                >
+                  {tooth}
+                </AppText>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <AppText color="textMuted" style={{ marginBottom: 8, marginTop: spacing.md, paddingHorizontal: spacing.lg, fontSize: 13 }}>Dientes temporales</AppText>
+          <View style={styles.grid}>
+            {TEMPORARY_TEETH.map((tooth) => (
               <TouchableOpacity
                 key={tooth}
                 style={[styles.item, selectedTooth === tooth.toString() && styles.itemActive]}
